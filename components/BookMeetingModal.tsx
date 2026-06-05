@@ -11,7 +11,6 @@ interface Props {
 }
 
 function defaultDateTime(): string {
-  // 3 days from now, rounded to next hour, as `YYYY-MM-DDTHH:MM` for <input type="datetime-local">
   const d = new Date(Date.now() + 3 * 86400000);
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
@@ -20,8 +19,8 @@ function defaultDateTime(): string {
 }
 
 export default function BookMeetingModal({ lead, onClose, onSaved }: Props) {
-  const [when, setWhen] = useState(defaultDateTime());
-  const [link, setLink] = useState("https://meet.google.com/sim-" + Math.random().toString(36).slice(2, 12));
+  const [when, setWhen]   = useState(defaultDateTime());
+  const [link, setLink]   = useState("https://meet.google.com/sim-" + Math.random().toString(36).slice(2, 12));
   const [agenda, setAgenda] = useState("Discovery call — pain mapping, scope, success criteria");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -47,68 +46,74 @@ export default function BookMeetingModal({ lead, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 backdrop-blur-sm px-4">
       <form
         onSubmit={submit}
-        className="w-full max-w-lg rounded-lg border border-[var(--border)] bg-[var(--panel)] p-5"
+        className="w-full max-w-lg border border-border2 bg-panel"
       >
-        <h2 className="text-lg font-semibold">Book a meeting</h2>
-        <p className="text-sm text-slate-400 mt-1">
-          {lead.organization.name} · {lead.primaryPerson?.full_name ?? "—"}
-        </p>
-
-        <div className="mt-4 space-y-3">
-          <label className="block">
-            <div className="text-xs text-slate-400 mb-1">Scheduled at</div>
-            <input
-              type="datetime-local"
-              value={when}
-              onChange={e => setWhen(e.target.value)}
-              required
-              className="w-full bg-[var(--panel-2)] border border-[var(--border)] rounded-md px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block">
-            <div className="text-xs text-slate-400 mb-1">Meeting link</div>
-            <input
-              type="url"
-              value={link}
-              onChange={e => setLink(e.target.value)}
-              className="w-full bg-[var(--panel-2)] border border-[var(--border)] rounded-md px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block">
-            <div className="text-xs text-slate-400 mb-1">Agenda</div>
-            <textarea
-              value={agenda}
-              onChange={e => setAgenda(e.target.value)}
-              rows={3}
-              className="w-full bg-[var(--panel-2)] border border-[var(--border)] rounded-md px-3 py-2 text-sm"
-            />
-          </label>
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <div className="label-eyebrow">BOOK MEETING</div>
+          <button type="button" onClick={onClose} className="text-textdim hover:text-text text-lg leading-none">×</button>
         </div>
 
-        {err && (
-          <div className="mt-3 px-3 py-2 rounded border border-red-500/40 bg-red-500/10 text-red-200 text-xs">
-            {err}
-          </div>
-        )}
+        <div className="px-5 py-4">
+          <div className="font-serif text-[20px] font-bold text-texthi leading-tight">{lead.organization.name}</div>
+          <div className="text-[12px] text-gold mt-0.5">{lead.primaryPerson?.full_name ?? "—"}</div>
+          <div className="text-[10px] text-textdim mt-0.5 tracking-wider uppercase">{lead.primaryPerson?.title ?? "—"}</div>
 
-        <div className="flex justify-end gap-2 mt-5">
+          <div className="mt-5 space-y-3">
+            <label className="block">
+              <div className="label-eyebrow-dim mb-1.5">SCHEDULED AT</div>
+              <input
+                type="datetime-local"
+                value={when}
+                onChange={e => setWhen(e.target.value)}
+                required
+                className="w-full bg-bg border border-border px-3 py-2 text-[13px] text-text focus:outline-none focus:border-gold/60"
+              />
+            </label>
+            <label className="block">
+              <div className="label-eyebrow-dim mb-1.5">MEETING LINK</div>
+              <input
+                type="url"
+                value={link}
+                onChange={e => setLink(e.target.value)}
+                className="w-full bg-bg border border-border px-3 py-2 text-[12px] text-text focus:outline-none focus:border-gold/60"
+              />
+            </label>
+            <label className="block">
+              <div className="label-eyebrow-dim mb-1.5">AGENDA</div>
+              <textarea
+                value={agenda}
+                onChange={e => setAgenda(e.target.value)}
+                rows={3}
+                className="w-full bg-bg border border-border px-3 py-2 text-[12px] text-text focus:outline-none focus:border-gold/60"
+              />
+            </label>
+          </div>
+
+          {err && (
+            <div className="mt-3 px-3 py-2 border border-red/40 bg-red/5 text-red text-[11px]">
+              <span className="label-eyebrow text-red mr-2">ERROR</span>{err}
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-3 py-2 text-sm rounded-md border border-[var(--border)] hover:bg-[var(--panel-2)]"
+            className="text-[11px] font-bold tracking-[0.15em] uppercase px-3 py-2 border border-border2 text-textdim hover:bg-panel2 hover:text-text disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-3 py-2 text-sm rounded-md bg-violet-500/30 border border-violet-500/60 text-violet-100 hover:bg-violet-500/40 disabled:opacity-50"
+            className="text-[11px] font-bold tracking-[0.15em] uppercase px-3 py-2 border border-gold text-gold hover:bg-gold/10 disabled:opacity-50"
           >
-            {saving ? "Booking…" : "Book + push to HubSpot"}
+            {saving ? "Booking…" : "Book + Push To HubSpot"}
           </button>
         </div>
       </form>

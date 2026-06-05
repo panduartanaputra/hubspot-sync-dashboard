@@ -9,47 +9,47 @@ function fmtTime(iso: string) {
 export default function SyncLogFeed({ rows }: { rows: SyncLogRow[] }) {
   return (
     <section>
-      <h2 className="text-sm uppercase tracking-wider text-slate-400 mb-3">Recent sync activity</h2>
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--panel)]">
+      <div className="label-eyebrow mb-3">SYNC ACTIVITY · LAST {rows.length}</div>
+      <div className="border border-border bg-panel">
         {rows.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-slate-500 italic">No sync activity yet.</div>
+          <div className="px-4 py-6 text-xs text-textdim2 italic tracking-wider uppercase">— No sync activity yet —</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wider text-slate-500">
-              <tr className="border-b border-[var(--border)]">
-                <th className="text-left px-4 py-2 font-medium">Time</th>
-                <th className="text-left px-4 py-2 font-medium">Action</th>
-                <th className="text-left px-4 py-2 font-medium">Status</th>
-                <th className="text-left px-4 py-2 font-medium">HubSpot IDs</th>
-                <th className="text-left px-4 py-2 font-medium">Duration</th>
+          <table className="w-full text-[12px]">
+            <thead className="label-eyebrow-dim">
+              <tr className="border-b border-border">
+                <th className="text-left px-4 py-2.5 font-bold">TIME</th>
+                <th className="text-left px-4 py-2.5 font-bold">ACTION</th>
+                <th className="text-left px-4 py-2.5 font-bold">STATUS</th>
+                <th className="text-left px-4 py-2.5 font-bold">HUBSPOT IDS</th>
+                <th className="text-left px-4 py-2.5 font-bold">DURATION</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.id} className="border-b border-[var(--border)]/60 last:border-0">
-                  <td className="px-4 py-2 text-slate-400">{fmtTime(r.attempted_at)}</td>
-                  <td className="px-4 py-2">{r.action}</td>
+                <tr key={r.id} className="border-b border-border/60 last:border-0 hover:bg-panel2">
+                  <td className="px-4 py-2 text-textdim font-mono">{fmtTime(r.attempted_at)}</td>
+                  <td className="px-4 py-2 text-text uppercase tracking-wider text-[11px]">{r.action.replace(/_/g, " ")}</td>
                   <td className="px-4 py-2">
-                    <span className={
+                    <span className={`text-[10px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border ${
                       r.status === "success"
-                        ? "text-emerald-300"
+                        ? "border-green/50 text-green"
                         : r.status === "failure"
-                        ? "text-red-300"
-                        : "text-amber-300"
-                    }>
+                        ? "border-red/50 text-red"
+                        : "border-gold/50 text-gold"
+                    }`}>
                       {r.status}
                     </span>
                     {r.error_message && (
-                      <div className="text-[11px] text-red-300/70 mt-0.5 truncate max-w-md" title={r.error_message}>
+                      <div className="text-[10px] text-red/70 mt-1 truncate max-w-md" title={r.error_message}>
                         {r.error_message}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-slate-400 text-xs">
-                    {r.hubspot_contact_id && <div>contact {r.hubspot_contact_id}</div>}
-                    {r.hubspot_deal_id && <div>deal {r.hubspot_deal_id}</div>}
+                  <td className="px-4 py-2 text-textdim text-[10px] font-mono">
+                    {r.hubspot_contact_id && <div>C · {r.hubspot_contact_id}</div>}
+                    {r.hubspot_deal_id && <div>D · {r.hubspot_deal_id}</div>}
                   </td>
-                  <td className="px-4 py-2 text-slate-400">{r.duration_ms ? `${r.duration_ms}ms` : "—"}</td>
+                  <td className="px-4 py-2 text-textdim font-mono">{r.duration_ms ? `${r.duration_ms}ms` : "—"}</td>
                 </tr>
               ))}
             </tbody>

@@ -3,19 +3,55 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0b0d11;
-  --panel: #14171d;
-  --panel-2: #1a1e26;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --border: #252b35;
+  /* Metis cockpit tokens */
+  --bg:        #080808;
+  --panel:     #0E0E0E;
+  --panel-2:   #141414;
+  --border:    #1A1A1A;
+  --border-2:  #252525;
+  --text:      #E2E2E2;
+  --text-hi:   #F0F0F0;
+  --text-dim:  #737373;
+  --text-dim2: #555555;
+
+  --gold:     #E0A030;
+  --gold-dim: rgba(224, 160, 48, 0.10);
+  --cyan:     #00EEFC;
+  --green:    #50B868;
+  --red:      #D05858;
+  --purple:   #A855F7;
+  --blue:     #5B8DEF;
 }
 
 html, body {
   background: var(--bg);
   color: var(--text);
   min-height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.font-serif {
+  font-family: 'Newsreader', 'Iowan Old Style', Georgia, serif;
 }
 
 * { box-sizing: border-box; }
+
+/* Tight uppercase eyebrow labels used across the cockpit */
+.label-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.label-eyebrow-dim {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim2);
+}

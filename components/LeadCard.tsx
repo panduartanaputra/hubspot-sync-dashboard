@@ -10,6 +10,34 @@ interface Props {
   onChange: () => void;
 }
 
+// Cockpit-style flat button: 1px border, tight letter-spacing, color-coded text.
+function CockpitButton({
+  onClick,
+  disabled,
+  tone,
+  children,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  tone: "gold" | "green" | "red" | "neutral";
+  children: React.ReactNode;
+}) {
+  const toneClass =
+    tone === "gold"  ? "border-gold/50 text-gold hover:bg-gold/10"
+    : tone === "green" ? "border-green/50 text-green hover:bg-green/10"
+    : tone === "red"   ? "border-red/50 text-red hover:bg-red/10"
+    :                    "border-border2 text-textdim hover:bg-panel2 hover:text-text";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-1 border ${toneClass} disabled:opacity-40`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function LeadCardView({ lead, onRequestBookMeeting, onChange }: Props) {
   const [busy, setBusy] = useState(false);
   const { opportunity, organization, primaryPerson, latestMeeting, column } = lead;
@@ -17,90 +45,81 @@ export default function LeadCardView({ lead, onRequestBookMeeting, onChange }: P
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     try { await fn(); onChange(); }
-    catch (e) { alert((e instanceof Error ? e.message : String(e))); }
+    catch (e) { alert(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   }
 
   const pushed = !!opportunity.hubspot_deal_id;
 
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2.5">
+    <div className="border border-border bg-panel2 px-3 py-2.5 hover:border-border2 transition-colors">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-sm font-medium text-slate-100 truncate">{organization.name}</div>
-          <div className="text-[11px] text-slate-400 truncate">
-            {primaryPerson?.full_name ?? "—"} · {primaryPerson?.title ?? "—"}
+        <div className="min-w-0 flex-1">
+          <div className="font-serif text-[15px] font-bold text-texthi truncate leading-tight">{organization.name}</div>
+          <div className="text-[11px] text-gold mt-0.5 truncate">
+            {primaryPerson?.full_name ?? "—"}
+          </div>
+          <div className="text-[10px] text-textdim mt-0.5 truncate tracking-wider uppercase">
+            {primaryPerson?.title ?? "—"}
           </div>
         </div>
         {pushed && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 whitespace-nowrap">
-            HubSpot ✓
+          <span className="text-[9px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border border-cyan/40 text-cyan whitespace-nowrap">
+            HUBSPOT
           </span>
         )}
       </div>
 
       {latestMeeting && (
-        <div className="text-[11px] text-slate-400 mt-1.5">
-          {column === "meeting_booked" && "📅 "}
-          {column === "meeting_held" && "✓ "}
+        <div className="text-[10px] text-textdim mt-2 tracking-wider uppercase">
+          <span className={
+            column === "meeting_booked" ? "text-gold"
+            : column === "meeting_held" ? "text-green"
+            : "text-textdim"
+          }>
+            {column === "meeting_booked" ? "▲ MEETING " : column === "meeting_held" ? "✓ HELD " : "✗ "}
+          </span>
           {new Date(latestMeeting.scheduled_at).toLocaleString(undefined, {
             month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
           })}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1.5 mt-2">
-        {column === "interested" || column === "qualified" ? (
+      <div className="flex flex-wrap gap-1.5 mt-2.5">
+        {(column === "interested" || column === "qualified") && (
           <>
-            <button
-              onClick={onRequestBookMeeting}
-              disabled={busy}
-              className="text-[11px] px-2 py-1 rounded bg-violet-500/20 border border-violet-500/40 text-violet-200 hover:bg-violet-500/30 disabled:opacity-50"
-            >
-              Book meeting
-            </button>
-            <button
+            <CockpitButton tone="gold" disabled={busy} onClick={onRequestBookMeeting}>
+              Book
+            </CockpitButton>
+            <CockpitButton
+              tone="neutral" disabled={busy}
               onClick={() => act(() => disqualifyOpportunity(opportunity.id, "Disqualified via dashboard"))}
-              disabled={busy}
-              className="text-[11px] px-2 py-1 rounded bg-zinc-500/15 border border-zinc-500/40 text-slate-300 hover:bg-zinc-500/25 disabled:opacity-50"
             >
               Disqualify
-            </button>
+            </CockpitButton>
           </>
-        ) : null}
+        )}
 
         {column === "meeting_booked" && latestMeeting && (
           <>
-            <button
-              onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "held"))}
-              disabled={busy}
-              className="text-[11px] px-2 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/30 disabled:opacity-50"
-            >
-              Mark held
-            </button>
-            <button
-              onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "no_show"))}
-              disabled={busy}
-              className="text-[11px] px-2 py-1 rounded bg-red-500/15 border border-red-500/40 text-red-200 hover:bg-red-500/25 disabled:opacity-50"
-            >
-              No-show
-            </button>
-            <button
-              onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "cancelled"))}
-              disabled={busy}
-              className="text-[11px] px-2 py-1 rounded bg-zinc-500/15 border border-zinc-500/40 text-slate-300 hover:bg-zinc-500/25 disabled:opacity-50"
-            >
+            <CockpitButton tone="green" disabled={busy} onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "held"))}>
+              Mark Held
+            </CockpitButton>
+            <CockpitButton tone="red" disabled={busy} onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "no_show"))}>
+              No-Show
+            </CockpitButton>
+            <CockpitButton tone="neutral" disabled={busy} onClick={() => act(() => updateMeetingStatus(latestMeeting.id, "cancelled"))}>
               Cancel
-            </button>
+            </CockpitButton>
           </>
         )}
 
         {column === "meeting_held" && (
-          <span className="text-[11px] text-slate-400 italic">Pending close · client-side</span>
+          <span className="text-[10px] text-textdim2 italic tracking-wider uppercase">Pending close · client-side</span>
         )}
 
         {column === "closed" && (
-          <span className="text-[11px] text-slate-500">{opportunity.status}</span>
+          <span className="text-[10px] text-textdim2 tracking-wider uppercase">{opportunity.status.replace("_", " ")}</span>
         )}
       </div>
     </div>

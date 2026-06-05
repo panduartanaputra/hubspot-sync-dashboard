@@ -10,6 +10,15 @@ interface Props {
   onChange: () => void;
 }
 
+// Override KANBAN_COLUMNS tone styling for the cockpit theme
+const COLUMN_ACCENTS: Record<KanbanColumn, string> = {
+  interested:     "text-textdim2",
+  qualified:      "text-blue",
+  meeting_booked: "text-gold",
+  meeting_held:   "text-green",
+  closed:         "text-textdim",
+};
+
 export default function KanbanBoard({ leads, onChange }: Props) {
   const [bookingFor, setBookingFor] = useState<LeadCard | null>(null);
 
@@ -22,14 +31,19 @@ export default function KanbanBoard({ leads, onChange }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-        {KANBAN_COLUMNS.map(col => {
+      <div className="mb-3 label-eyebrow">PIPELINE</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0 border border-border bg-panel">
+        {KANBAN_COLUMNS.map((col, idx) => {
           const cards = byColumn.get(col.id) ?? [];
+          const accent = COLUMN_ACCENTS[col.id];
           return (
-            <div key={col.id} className={`rounded-lg border ${col.tone} px-3 py-3 min-h-[500px]`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-xs uppercase tracking-wider text-slate-300 font-medium">{col.label}</div>
-                <div className="text-xs text-slate-400">{cards.length}</div>
+            <div
+              key={col.id}
+              className={`px-3 py-3 min-h-[500px] ${idx > 0 ? "border-l border-border" : ""}`}
+            >
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
+                <div className={`label-eyebrow ${accent}`}>{col.label.toUpperCase()}</div>
+                <div className={`text-xs font-bold ${accent}`}>{cards.length.toString().padStart(2, "0")}</div>
               </div>
               <div className="space-y-2">
                 {cards.map(lead => (
@@ -41,7 +55,7 @@ export default function KanbanBoard({ leads, onChange }: Props) {
                   />
                 ))}
                 {cards.length === 0 && (
-                  <div className="text-[11px] text-slate-500 italic">No leads here</div>
+                  <div className="text-[10px] text-textdim2 italic tracking-wider">— EMPTY —</div>
                 )}
               </div>
             </div>

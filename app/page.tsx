@@ -28,27 +28,35 @@ export default function HomePage() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 5000); // poll every 5s for real-time feel
+    const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
   }, [refresh]);
 
   return (
-    <main className="min-h-screen px-6 py-8 max-w-[1600px] mx-auto">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">HubSpot Sync Dashboard</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Move leads through the pipeline. Confirmed meetings auto-push to HubSpot.
-        </p>
+    <main className="min-h-screen px-8 py-7 max-w-[1600px] mx-auto">
+      {/* Header bar — cockpit topbar */}
+      <header className="flex items-end justify-between mb-8 pb-5 border-b border-border">
+        <div>
+          <div className="label-eyebrow mb-1.5">METIS · LEAD HANDOFF</div>
+          <h1 className="font-serif text-[26px] font-bold text-texthi leading-none">HubSpot Sync Cockpit</h1>
+          <p className="text-xs text-textdim mt-2">
+            Move leads through the funnel. Confirmed meetings auto-push to HubSpot.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="label-eyebrow-dim">ENV</div>
+          <div className="text-xs text-text mt-1">supabase-lab · na2</div>
+        </div>
       </header>
 
       {err && (
-        <div className="mb-6 px-4 py-3 rounded-md border border-red-500/40 bg-red-500/10 text-red-200 text-sm">
-          {err}
+        <div className="mb-6 px-4 py-3 border border-red/40 bg-red/5 text-red text-xs">
+          <span className="label-eyebrow text-red mr-2">ERROR</span>{err}
         </div>
       )}
 
       {loading ? (
-        <div className="text-slate-400 text-sm">Loading…</div>
+        <div className="text-textdim text-xs label-eyebrow-dim">LOADING…</div>
       ) : (
         <>
           <KPIRow leads={leads} syncLog={syncLog} />
