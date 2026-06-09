@@ -14,13 +14,21 @@ export default function OnboardForm({ clientId, onDone }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const entraTrim = entra.trim().toLowerCase();
+  const googleTrim = google.trim().toLowerCase();
+  const duplicate = entraTrim !== "" && entraTrim === googleTrim;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!entra || !google) return;
+    if (duplicate) {
+      setErr("Entra and Google domains must be different — a domain cannot exist on both M365 and Google Workspace at the same time.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
-      await fn.createOnboarding({ client_id: clientId, entra_domain: entra, google_domain: google });
+      await fn.createOnboarding({ client_id: clientId, entra_domain: entraTrim, google_domain: googleTrim });
       setEntra("");
       setGoogle("");
       onDone();
@@ -40,7 +48,9 @@ export default function OnboardForm({ clientId, onDone }: Props) {
             value={entra}
             onChange={(e) => setEntra(e.target.value)}
             placeholder="outreach-entra.com"
-            className="bg-panel2 border border-border2 px-3 py-2 text-xs text-texthi w-56 focus:border-gold outline-none"
+            className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
+              duplicate ? "border-red focus:border-red" : "border-border2 focus:border-gold"
+            }`}
             disabled={busy}
           />
         </div>
@@ -50,18 +60,23 @@ export default function OnboardForm({ clientId, onDone }: Props) {
             value={google}
             onChange={(e) => setGoogle(e.target.value)}
             placeholder="outreach-google.com"
-            className="bg-panel2 border border-border2 px-3 py-2 text-xs text-texthi w-56 focus:border-gold outline-none"
+            className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
+              duplicate ? "border-red focus:border-red" : "border-border2 focus:border-gold"
+            }`}
             disabled={busy}
           />
         </div>
         <button
           type="submit"
-          disabled={busy || !entra || !google}
+          disabled={busy || !entra || !google || duplicate}
           className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {busy ? "STARTING…" : "START ONBOARDING"}
         </button>
-        {err && <div className="text-red text-xs ml-2">{err}</div>}
+        {duplicate && (
+          <div className="text-red text-xs ml-2">DOMAINS MUST BE DIFFERENT</div>
+        )}
+        {err && !duplicate && <div className="text-red text-xs ml-2">{err}</div>}
       </form>
       <div className="text-[10px] text-textdim mt-3 leading-relaxed">
         Mode: <span className="text-gold">purchase_domain_for_me</span> ·{" "}
