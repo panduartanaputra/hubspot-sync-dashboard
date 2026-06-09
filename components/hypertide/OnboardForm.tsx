@@ -87,72 +87,88 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
     return `START ${filled.join(" + ")}`;
   })();
 
+  const entraTag = entraBurned && !duplicate && !entraLocked
+    ? { color: "text-purple", text: "BURNED PREVIOUSLY" }
+    : entraNonDotCom && !duplicate && !entraLocked
+    ? { color: "text-gold", text: "NON-.COM · MAY HURT DELIVERABILITY" }
+    : null;
+  const googleTag = googleBurned && !duplicate && !googleLocked
+    ? { color: "text-purple", text: "BURNED PREVIOUSLY" }
+    : googleNonDotCom && !duplicate && !googleLocked
+    ? { color: "text-gold", text: "NON-.COM · MAY HURT DELIVERABILITY" }
+    : null;
+
   return (
     <div>
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-        <div>
-          <label className="label-eyebrow-dim block mb-1">
-            ENTRA DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
-          </label>
-          <input
-            value={entra}
-            onChange={(e) => setEntra(e.target.value)}
-            placeholder={entraLocked ? "—" : "outreach-entra.com"}
-            className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
-              entraLocked
-                ? "border-border text-textdim2 cursor-not-allowed"
-                : duplicate
-                ? "border-red text-texthi focus:border-red"
-                : entraBurned
-                ? "border-purple text-texthi focus:border-purple"
-                : "border-border2 text-texthi focus:border-gold"
-            }`}
-            disabled={busy || entraLocked}
-          />
-          {entraBurned && !duplicate && !entraLocked && (
-            <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
+      <form onSubmit={submit}>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label-eyebrow-dim block mb-1">
+              ENTRA DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
+            </label>
+            <input
+              value={entra}
+              onChange={(e) => setEntra(e.target.value)}
+              placeholder={entraLocked ? "—" : "outreach-entra.com"}
+              className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
+                entraLocked
+                  ? "border-border text-textdim2 cursor-not-allowed"
+                  : duplicate
+                  ? "border-red text-texthi focus:border-red"
+                  : entraBurned
+                  ? "border-purple text-texthi focus:border-purple"
+                  : "border-border2 text-texthi focus:border-gold"
+              }`}
+              disabled={busy || entraLocked}
+            />
+          </div>
+          <div>
+            <label className="label-eyebrow-dim block mb-1">
+              GOOGLE DOMAIN {googleLocked && <span className="text-textdim2">(already active)</span>}
+            </label>
+            <input
+              value={google}
+              onChange={(e) => setGoogle(e.target.value)}
+              placeholder={googleLocked ? "—" : "outreach-google.com"}
+              className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
+                googleLocked
+                  ? "border-border text-textdim2 cursor-not-allowed"
+                  : duplicate
+                  ? "border-red text-texthi focus:border-red"
+                  : googleBurned
+                  ? "border-purple text-texthi focus:border-purple"
+                  : "border-border2 text-texthi focus:border-gold"
+              }`}
+              disabled={busy || googleLocked}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={busy || nothingFilled || duplicate}
+            className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {buttonLabel}
+          </button>
+          {duplicate && (
+            <div className="text-red text-xs self-center">DOMAINS MUST BE DIFFERENT</div>
           )}
-          {entraNonDotCom && !entraBurned && !duplicate && !entraLocked && (
-            <div className="text-gold text-[10px] mt-1 label-eyebrow">NON-.COM · MAY HURT DELIVERABILITY</div>
-          )}
+          {err && !duplicate && <div className="text-red text-xs self-center">{err}</div>}
         </div>
-        <div>
-          <label className="label-eyebrow-dim block mb-1">
-            GOOGLE DOMAIN {googleLocked && <span className="text-textdim2">(already active)</span>}
-          </label>
-          <input
-            value={google}
-            onChange={(e) => setGoogle(e.target.value)}
-            placeholder={googleLocked ? "—" : "outreach-google.com"}
-            className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
-              googleLocked
-                ? "border-border text-textdim2 cursor-not-allowed"
-                : duplicate
-                ? "border-red text-texthi focus:border-red"
-                : googleBurned
-                ? "border-purple text-texthi focus:border-purple"
-                : "border-border2 text-texthi focus:border-gold"
-            }`}
-            disabled={busy || googleLocked}
-          />
-          {googleBurned && !duplicate && !googleLocked && (
-            <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
-          )}
-          {googleNonDotCom && !googleBurned && !duplicate && !googleLocked && (
-            <div className="text-gold text-[10px] mt-1 label-eyebrow">NON-.COM · MAY HURT DELIVERABILITY</div>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={busy || nothingFilled || duplicate}
-          className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          {buttonLabel}
-        </button>
-        {duplicate && (
-          <div className="text-red text-xs ml-2">DOMAINS MUST BE DIFFERENT</div>
+        {/* Per-input warnings on a separate row, each aligned with its input column */}
+        {(entraTag || googleTag) && (
+          <div className="flex flex-wrap gap-3 mt-2">
+            <div className="w-56">
+              {entraTag && (
+                <span className={`${entraTag.color} text-[10px] label-eyebrow`}>{entraTag.text}</span>
+              )}
+            </div>
+            <div className="w-56">
+              {googleTag && (
+                <span className={`${googleTag.color} text-[10px] label-eyebrow`}>{googleTag.text}</span>
+              )}
+            </div>
+          </div>
         )}
-        {err && !duplicate && <div className="text-red text-xs ml-2">{err}</div>}
       </form>
 
       <div className="text-[10px] text-textdim mt-3 leading-relaxed">
