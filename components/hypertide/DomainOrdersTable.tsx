@@ -178,7 +178,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
                         DISCARD
                       </button>
                     )}
-                    {(o.status === "done" || o.status === "done_pre_unipile") && (
+                    {o.status === "done" && (
                       <button
                         onClick={() => deactivate(o.id, o.domain)}
                         disabled={busy === o.id}
