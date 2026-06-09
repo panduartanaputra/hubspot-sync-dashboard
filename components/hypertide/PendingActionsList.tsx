@@ -49,8 +49,9 @@ export default function PendingActionsList({
   const approvePayment = async (a: PendingAction) => {
     if (!a.domain_order_id) return;
     const domain = (a.payload as { domain?: string })?.domain ?? "this order";
-    const plan = (a.payload as { plan?: string })?.plan?.toUpperCase() ?? "";
-    if (!confirm(`Finalize payment for ${plan} order on "${domain}"?\n\nThis charges the client's saved payment method via Hypertide. The order will move from pending_payment → paid and start provisioning.`)) return;
+    const rawPlan = (a.payload as { plan?: string })?.plan;
+    const planText = rawPlan === "entra" ? "OUTLOOK" : rawPlan === "google" ? "GOOGLE" : "";
+    if (!confirm(`Finalize payment for ${planText} order on "${domain}"?\n\nThis charges the client's saved payment method via Hypertide. The order will move from pending_payment → paid and start provisioning.`)) return;
     setBusy(a.id);
     try {
       await fn.approvePayment({ domain_order_ids: [a.domain_order_id] });

@@ -124,7 +124,7 @@ export default function HypertidePage() {
           <div className="label-eyebrow mb-1.5">METIS · HYPERTIDE INFRASTRUCTURE</div>
           <h1 className="font-serif text-[26px] font-bold text-texthi leading-none">Domain & Inbox Cockpit</h1>
           <p className="text-xs text-textdim mt-2">
-            Provisioning, Send-As setup, and replacement loops across Hypertide Entra + Google plans.
+            Provisioning, Send-As setup, and replacement loops across Hypertide Outlook + Google plans.
           </p>
         </div>
         <div className="flex items-end gap-6">

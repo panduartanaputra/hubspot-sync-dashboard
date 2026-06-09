@@ -6,6 +6,7 @@ import {
   IntegrationConnection,
   Mailbox,
   fn,
+  planLabelUpper,
   statusColor,
 } from "@/lib/hypertide";
 
@@ -106,7 +107,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
       {/* Snapshot */}
       <div className="mb-3 text-[11px] text-textdim">
         <span className="label-eyebrow-dim mr-2">SNAPSHOT</span>
-        ACTIVE: <span className="text-texthi">{snapshot.entra}</span> Entra ·{" "}
+        ACTIVE: <span className="text-texthi">{snapshot.entra}</span> Outlook ·{" "}
         <span className="text-texthi">{snapshot.google}</span> Google ·{" "}
         <span className="text-texthi">{snapshot.mailboxes}</span> mailboxes ·{" "}
         <span className={snapshot.unipileConnected > 0 ? "text-green" : "text-textdim2"}>
@@ -154,7 +155,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
               const countdown = formatCountdown(o.cancellation_scheduled_at);
               return (
                 <tr key={o.id} className="border-b border-border hover:bg-panel2/40">
-                  <td className="py-2 text-texthi uppercase">{o.plan}</td>
+                  <td className="py-2 text-texthi">{planLabelUpper(o.plan)}</td>
                   <td className="py-2 text-texthi">{o.domain}</td>
                   <td className={`py-2 ${statusColor(o.status)}`}>
                     ● {o.status}

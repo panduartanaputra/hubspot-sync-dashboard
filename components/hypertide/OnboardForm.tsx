@@ -60,13 +60,13 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
     e.preventDefault();
     if (nothingFilled) return;
     if (duplicate) {
-      setErr("Entra and Google domains must be different.");
+      setErr("Outlook and Google domains must be different.");
       return;
     }
     // Generic safety-net confirmation
     const lines: string[] = ["Start onboarding the following?"];
-    if (entraTrim && !entraLocked) lines.push(`• Entra:  ${entraTrim}`);
-    if (googleTrim && !googleLocked) lines.push(`• Google: ${googleTrim}`);
+    if (entraTrim && !entraLocked) lines.push(`• Outlook: ${entraTrim}`);
+    if (googleTrim && !googleLocked) lines.push(`• Google:  ${googleTrim}`);
     lines.push("", "An order will be placed with Hypertide for each.");
     if (!confirm(lines.join("\n"))) return;
 
@@ -80,7 +80,7 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
   const buttonLabel = (() => {
     if (busy) return "STARTING…";
     const filled = [
-      entraTrim && !entraLocked ? "ENTRA" : null,
+      entraTrim && !entraLocked ? "OUTLOOK" : null,
       googleTrim && !googleLocked ? "GOOGLE" : null,
     ].filter(Boolean);
     if (filled.length === 0) return "START ONBOARDING";
@@ -104,12 +104,12 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="label-eyebrow-dim block mb-1">
-              ENTRA DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
+              OUTLOOK DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
             </label>
             <input
               value={entra}
               onChange={(e) => setEntra(e.target.value)}
-              placeholder={entraLocked ? "—" : "outreach-entra.com"}
+              placeholder={entraLocked ? "—" : "outreach-outlook.com"}
               className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
                 entraLocked
                   ? "border-border text-textdim2 cursor-not-allowed"

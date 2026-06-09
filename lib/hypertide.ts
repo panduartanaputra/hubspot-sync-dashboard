@@ -294,3 +294,13 @@ export function statusColor(s: OrderStatus): string {
 export function actionLabel(t: PendingActionType): string {
   return t.replace(/_/g, " ").toUpperCase();
 }
+
+/** User-facing label for a plan. Internally the column + Hypertide API still
+ *  use 'entra'/'google'; this is purely for display so operators don't have to
+ *  know that 'Entra' refers to Microsoft Outlook / M365. */
+export function planLabel(plan: PlanType): string {
+  return plan === "entra" ? "Outlook" : "Google";
+}
+export function planLabelUpper(plan: PlanType): string {
+  return plan === "entra" ? "OUTLOOK" : "GOOGLE";
+}
