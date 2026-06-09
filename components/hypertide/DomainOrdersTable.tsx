@@ -36,6 +36,19 @@ export default function DomainOrdersTable({ orders, mailboxes, onChange }: Props
     }
   };
 
+  const discard = async (orderId: string, domain: string) => {
+    if (!confirm(`Discard the pending order for "${domain}"? No payment was made, so this just removes the in-flight order.`)) return;
+    setBusy(orderId);
+    try {
+      await fn.discardOrder({ domain_order_id: orderId });
+      onChange();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (orders.length === 0) {
     return <div className="text-textdim text-xs label-eyebrow-dim">NO ORDERS YET</div>;
   }
@@ -63,6 +76,15 @@ export default function DomainOrdersTable({ orders, mailboxes, onChange }: Props
               <td className="py-2 text-textdim">{o.master_inbox ?? "—"}</td>
               <td className="py-2 text-textdim">{mbs.length}</td>
               <td className="py-2 text-right space-x-2">
+                {o.status === "pending_payment" && (
+                  <button
+                    onClick={() => discard(o.id, o.domain)}
+                    disabled={busy === o.id}
+                    className="px-2 py-1 border border-textdim/40 text-textdim hover:bg-panel2 text-[10px] label-eyebrow disabled:opacity-30"
+                  >
+                    DISCARD
+                  </button>
+                )}
                 {(o.status === "done" || o.status === "done_pre_unipile") && (
                   <button
                     onClick={() => cancel(o.id)}

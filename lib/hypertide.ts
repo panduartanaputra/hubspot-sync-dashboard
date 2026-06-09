@@ -142,11 +142,14 @@ export async function fetchDomainOrders(clientId: string): Promise<DomainOrder[]
 }
 
 export async function fetchBurnedDomains(clientId: string): Promise<DomainOrder[]> {
+  // Only count domains that were actually paid for (reputation risk).
+  // Orders cancelled before payment never went live — exclude them.
   const { data, error } = await ht()
     .from("domain_orders")
     .select("*")
     .eq("client_id", clientId)
     .in("status", ["cancelled", "failed"])
+    .not("paid_at", "is", null)
     .order("done_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as DomainOrder[];
@@ -216,6 +219,7 @@ export const fn = {
   tick: () => invoke<{ metrics_inserted: number; replacements_proposed: number }>("hypertide-tick", {}),
   resolveAction: (args: { pending_action_id: string; payload?: Record<string, unknown> }) =>
     invoke("hypertide-resolve-action", args),
+  discardOrder: (args: { domain_order_id: string }) => invoke("hypertide-discard-order", args),
 };
 
 // ============ STATUS COLOR HELPERS ============
