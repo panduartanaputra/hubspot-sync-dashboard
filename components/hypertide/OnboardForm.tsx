@@ -5,20 +5,27 @@ import { fn } from "@/lib/hypertide";
 
 interface Props {
   clientId: string;
-  burnedDomains: string[]; // lowercase domain strings of cancelled/failed prior orders
+  burnedDomains: string[];        // lowercase domain strings of cancelled/failed prior orders
+  activePlans: Array<"entra" | "google">; // which plans this client already has an in-flight order on
   onDone: () => void;
 }
 
-export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) {
+export default function OnboardForm({ clientId, burnedDomains, activePlans, onDone }: Props) {
   const [entra, setEntra] = useState("");
   const [google, setGoogle] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [confirmingBurn, setConfirmingBurn] = useState(false);
 
+  const entraLocked = activePlans.includes("entra");
+  const googleLocked = activePlans.includes("google");
+
   const entraTrim = entra.trim().toLowerCase();
   const googleTrim = google.trim().toLowerCase();
-  const duplicate = entraTrim !== "" && entraTrim === googleTrim;
+
+  const nothingFilled = entraTrim === "" && googleTrim === "";
+  const duplicate =
+    entraTrim !== "" && googleTrim !== "" && entraTrim === googleTrim;
 
   const burnedSet = new Set(burnedDomains.map((d) => d.toLowerCase()));
   const entraBurned = entraTrim !== "" && burnedSet.has(entraTrim);
@@ -30,7 +37,11 @@ export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) 
     setErr(null);
     setConfirmingBurn(false);
     try {
-      await fn.createOnboarding({ client_id: clientId, entra_domain: entraTrim, google_domain: googleTrim });
+      await fn.createOnboarding({
+        client_id: clientId,
+        entra_domain: entraLocked ? "" : entraTrim,
+        google_domain: googleLocked ? "" : googleTrim,
+      });
       setEntra("");
       setGoogle("");
       onDone();
@@ -43,9 +54,9 @@ export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!entra || !google) return;
+    if (nothingFilled) return;
     if (duplicate) {
-      setErr("Entra and Google domains must be different — a domain cannot exist on both M365 and Google Workspace at the same time.");
+      setErr("Entra and Google domains must be different.");
       return;
     }
     if (anyBurned) {
@@ -55,53 +66,71 @@ export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) 
     await actuallySubmit();
   };
 
+  const buttonLabel = (() => {
+    if (busy) return "STARTING…";
+    const filled = [
+      entraTrim && !entraLocked ? "ENTRA" : null,
+      googleTrim && !googleLocked ? "GOOGLE" : null,
+    ].filter(Boolean);
+    if (filled.length === 0) return "START ONBOARDING";
+    return `START ${filled.join(" + ")}`;
+  })();
+
   return (
     <div>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="label-eyebrow-dim block mb-1">ENTRA DOMAIN</label>
+          <label className="label-eyebrow-dim block mb-1">
+            ENTRA DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
+          </label>
           <input
             value={entra}
             onChange={(e) => setEntra(e.target.value)}
-            placeholder="outreach-entra.com"
-            className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
-              duplicate
-                ? "border-red focus:border-red"
+            placeholder={entraLocked ? "—" : "outreach-entra.com"}
+            className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
+              entraLocked
+                ? "border-border text-textdim2 cursor-not-allowed"
+                : duplicate
+                ? "border-red text-texthi focus:border-red"
                 : entraBurned
-                ? "border-purple focus:border-purple"
-                : "border-border2 focus:border-gold"
+                ? "border-purple text-texthi focus:border-purple"
+                : "border-border2 text-texthi focus:border-gold"
             }`}
-            disabled={busy}
+            disabled={busy || entraLocked}
           />
-          {entraBurned && !duplicate && (
+          {entraBurned && !duplicate && !entraLocked && (
             <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
           )}
         </div>
         <div>
-          <label className="label-eyebrow-dim block mb-1">GOOGLE DOMAIN</label>
+          <label className="label-eyebrow-dim block mb-1">
+            GOOGLE DOMAIN {googleLocked && <span className="text-textdim2">(already active)</span>}
+          </label>
           <input
             value={google}
             onChange={(e) => setGoogle(e.target.value)}
-            placeholder="outreach-google.com"
-            className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
-              duplicate
-                ? "border-red focus:border-red"
+            placeholder={googleLocked ? "—" : "outreach-google.com"}
+            className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
+              googleLocked
+                ? "border-border text-textdim2 cursor-not-allowed"
+                : duplicate
+                ? "border-red text-texthi focus:border-red"
                 : googleBurned
-                ? "border-purple focus:border-purple"
-                : "border-border2 focus:border-gold"
+                ? "border-purple text-texthi focus:border-purple"
+                : "border-border2 text-texthi focus:border-gold"
             }`}
-            disabled={busy}
+            disabled={busy || googleLocked}
           />
-          {googleBurned && !duplicate && (
+          {googleBurned && !duplicate && !googleLocked && (
             <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
           )}
         </div>
         <button
           type="submit"
-          disabled={busy || !entra || !google || duplicate}
+          disabled={busy || nothingFilled || duplicate}
           className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          {busy ? "STARTING…" : "START ONBOARDING"}
+          {buttonLabel}
         </button>
         {duplicate && (
           <div className="text-red text-xs ml-2">DOMAINS MUST BE DIFFERENT</div>
@@ -121,7 +150,8 @@ export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) 
           Hypertide dashboard
         </a>{" "}
         first (login required) · Supported TLDs:{" "}
-        <span className="text-text">.com / .net / .org / .info / .biz</span>
+        <span className="text-text">.com / .net / .org / .info / .biz</span> ·{" "}
+        <span className="text-textdim2">Fill only the plan(s) you need — empty fields are skipped.</span>
       </div>
 
       {/* Burned-domain confirmation overlay */}

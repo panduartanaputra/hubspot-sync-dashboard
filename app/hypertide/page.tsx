@@ -171,6 +171,21 @@ export default function HypertidePage() {
             <OnboardForm
               clientId={activeClient.id}
               burnedDomains={burned.map((b) => b.domain)}
+              activePlans={
+                orders
+                  .filter((o) =>
+                    [
+                      "pending_payment",
+                      "paid",
+                      "provisioning",
+                      "done_pre_unipile",
+                      "done",
+                      "replacing",
+                      "cancelling",
+                    ].includes(o.status)
+                  )
+                  .map((o) => o.plan)
+              }
               onDone={refresh}
             />
           </section>
