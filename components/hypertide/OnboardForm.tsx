@@ -7,10 +7,11 @@ interface Props {
   clientId: string;
   burnedDomains: string[];        // lowercase domain strings of cancelled/failed prior orders
   activePlans: Array<"entra" | "google">; // which plans this client already has an in-flight order on
+  activeDomains: string[];        // lowercase domain strings of any currently-active orders (any client)
   onDone: () => void;
 }
 
-export default function OnboardForm({ clientId, burnedDomains, activePlans, onDone }: Props) {
+export default function OnboardForm({ clientId, burnedDomains, activePlans, activeDomains, onDone }: Props) {
   const [entra, setEntra] = useState("");
   const [google, setGoogle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +36,11 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
   const isDotCom = (d: string) => d !== "" && d.endsWith(".com");
   const entraNonDotCom = entraTrim !== "" && !isDotCom(entraTrim);
   const googleNonDotCom = googleTrim !== "" && !isDotCom(googleTrim);
+
+  const activeSet = new Set(activeDomains.map((d) => d.toLowerCase()));
+  const entraConflict = entraTrim !== "" && activeSet.has(entraTrim);
+  const googleConflict = googleTrim !== "" && activeSet.has(googleTrim);
+  const anyConflict = entraConflict || googleConflict;
 
   const actuallySubmit = async () => {
     setBusy(true);
@@ -63,6 +69,10 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
       setErr("Outlook and Google domains must be different.");
       return;
     }
+    if (anyConflict) {
+      setErr("One of the domains is already used by an active order. Pick a different name.");
+      return;
+    }
     // Generic safety-net confirmation
     const lines: string[] = ["Start the new order(s) below?"];
     if (entraTrim && !entraLocked) lines.push(`• Outlook: ${entraTrim}`);
@@ -87,12 +97,16 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
     return `START ${filled.join(" + ")}`;
   })();
 
-  const entraTag = entraBurned && !duplicate && !entraLocked
+  const entraTag = entraConflict && !duplicate && !entraLocked
+    ? { color: "text-red", text: "ALREADY USED BY AN ACTIVE ORDER" }
+    : entraBurned && !duplicate && !entraLocked
     ? { color: "text-purple", text: "BURNED PREVIOUSLY" }
     : entraNonDotCom && !duplicate && !entraLocked
     ? { color: "text-gold", text: "NON-.COM · MAY HURT DELIVERABILITY" }
     : null;
-  const googleTag = googleBurned && !duplicate && !googleLocked
+  const googleTag = googleConflict && !duplicate && !googleLocked
+    ? { color: "text-red", text: "ALREADY USED BY AN ACTIVE ORDER" }
+    : googleBurned && !duplicate && !googleLocked
     ? { color: "text-purple", text: "BURNED PREVIOUSLY" }
     : googleNonDotCom && !duplicate && !googleLocked
     ? { color: "text-gold", text: "NON-.COM · MAY HURT DELIVERABILITY" }
@@ -113,7 +127,7 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
               className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
                 entraLocked
                   ? "border-border text-textdim2 cursor-not-allowed"
-                  : duplicate
+                  : duplicate || entraConflict
                   ? "border-red text-texthi focus:border-red"
                   : entraBurned
                   ? "border-purple text-texthi focus:border-purple"
@@ -133,7 +147,7 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
               className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
                 googleLocked
                   ? "border-border text-textdim2 cursor-not-allowed"
-                  : duplicate
+                  : duplicate || googleConflict
                   ? "border-red text-texthi focus:border-red"
                   : googleBurned
                   ? "border-purple text-texthi focus:border-purple"
@@ -144,7 +158,7 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
           </div>
           <button
             type="submit"
-            disabled={busy || nothingFilled || duplicate}
+            disabled={busy || nothingFilled || duplicate || anyConflict}
             className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {buttonLabel}
@@ -152,7 +166,10 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
           {duplicate && (
             <div className="text-red text-xs self-center">DOMAINS MUST BE DIFFERENT</div>
           )}
-          {err && !duplicate && <div className="text-red text-xs self-center">{err}</div>}
+          {anyConflict && !duplicate && (
+            <div className="text-red text-xs self-center">DOMAIN ALREADY IN USE</div>
+          )}
+          {err && !duplicate && !anyConflict && <div className="text-red text-xs self-center">{err}</div>}
         </div>
         {/* Per-input warnings on a separate row, each aligned with its input column */}
         {(entraTag || googleTag) && (

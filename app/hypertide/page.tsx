@@ -263,6 +263,9 @@ export default function HypertidePage() {
                   )
                   .map((o) => o.plan)
               }
+              activeDomains={orders
+                .filter((o) => !["cancelled", "failed"].includes(o.status))
+                .map((o) => o.domain.toLowerCase())}
               onDone={refresh}
             />
           </section>
