@@ -144,7 +144,22 @@ export default function HypertidePage() {
 
           {/* Onboard new */}
           <section className="mb-6 border border-border bg-panel p-4">
-            <div className="label-eyebrow text-gold mb-3">ONBOARD NEW</div>
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="label-eyebrow text-gold">ONBOARD NEW</div>
+              <div className="text-[10px] label-eyebrow-dim">
+                CLIENT BASE DOMAIN:{" "}
+                <span className="font-mono text-cyan tracking-normal normal-case">
+                  {activeClient.forwarding_domain}
+                </span>
+              </div>
+            </div>
+            <div className="mb-4 px-3 py-2 border border-border2 bg-panel2 text-xs text-textdim">
+              Use{" "}
+              <span className="text-cyan font-mono">{activeClient.forwarding_domain}</span>{" "}
+              as the basis for the new outreach domains you purchase from Hypertide
+              (e.g. <span className="text-text">try-{activeClient.forwarding_domain.split(".")[0]}.com</span>,{" "}
+              <span className="text-text">go-{activeClient.forwarding_domain.split(".")[0]}.net</span>).
+            </div>
             <OnboardForm clientId={activeClient.id} onDone={refresh} />
           </section>
 
