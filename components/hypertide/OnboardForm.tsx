@@ -63,6 +63,13 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
       setErr("Entra and Google domains must be different.");
       return;
     }
+    // Generic safety-net confirmation
+    const lines: string[] = ["Start onboarding the following?"];
+    if (entraTrim && !entraLocked) lines.push(`• Entra:  ${entraTrim}`);
+    if (googleTrim && !googleLocked) lines.push(`• Google: ${googleTrim}`);
+    lines.push("", "An order will be placed with Hypertide for each.");
+    if (!confirm(lines.join("\n"))) return;
+
     if (anyBurned) {
       setConfirmingBurn(true);
       return;

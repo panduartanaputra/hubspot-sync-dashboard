@@ -48,6 +48,9 @@ export default function PendingActionsList({
 
   const approvePayment = async (a: PendingAction) => {
     if (!a.domain_order_id) return;
+    const domain = (a.payload as { domain?: string })?.domain ?? "this order";
+    const plan = (a.payload as { plan?: string })?.plan?.toUpperCase() ?? "";
+    if (!confirm(`Finalize payment for ${plan} order on "${domain}"?\n\nThis charges the client's saved payment method via Hypertide. The order will move from pending_payment → paid and start provisioning.`)) return;
     setBusy(a.id);
     try {
       await fn.approvePayment({ domain_order_ids: [a.domain_order_id] });
@@ -60,6 +63,14 @@ export default function PendingActionsList({
   };
 
   const resolve = async (a: PendingAction, payload?: Record<string, unknown>) => {
+    // Extra safety net only for SELECT MASTER — the choice is hard to undo
+    // (would require manual intervention with Hypertide support).
+    if (a.action_type === "select_master") {
+      const chosen = (payload as { master_inbox?: string } | undefined)?.master_inbox;
+      const domain = (a.payload as { domain?: string })?.domain ?? "this domain";
+      if (!chosen) return;
+      if (!confirm(`Set master inbox for "${domain}" to:\n\n  ${chosen}\n\nThis tells Hypertide which mailbox should act as the central master (Send-As source + BCC-forwarding destination). Changing it later requires a manual support request.`)) return;
+    }
     setBusy(a.id);
     try {
       await fn.resolveAction({ pending_action_id: a.id, payload });
