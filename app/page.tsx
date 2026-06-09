@@ -43,14 +43,9 @@ export default function HomePage() {
             Move leads through the funnel. Confirmed meetings auto-push to HubSpot.
           </p>
         </div>
-        <div className="flex items-end gap-6">
-          <a href="/hypertide" className="text-xs text-textdim hover:text-gold label-eyebrow-dim">
-            HYPERTIDE COCKPIT →
-          </a>
-          <div className="text-right">
-            <div className="label-eyebrow-dim">ENV</div>
-            <div className="text-xs text-text mt-1">supabase-lab · na2</div>
-          </div>
+        <div className="text-right">
+          <div className="label-eyebrow-dim">ENV</div>
+          <div className="text-xs text-text mt-1">supabase-lab · na2</div>
         </div>
       </header>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import OnboardForm from "@/components/hypertide/OnboardForm";
 import DomainOrdersTable from "@/components/hypertide/DomainOrdersTable";
 import PendingActionsList from "@/components/hypertide/PendingActionsList";
@@ -159,9 +158,6 @@ export default function HypertidePage() {
               </button>
             )
           )}
-          <Link href="/" className="text-xs text-textdim hover:text-gold label-eyebrow-dim">
-            ← SYNC COCKPIT
-          </Link>
         </div>
       </header>
 
