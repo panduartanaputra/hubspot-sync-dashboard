@@ -32,6 +32,10 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
   const googleBurned = googleTrim !== "" && burnedSet.has(googleTrim);
   const anyBurned = entraBurned || googleBurned;
 
+  const isDotCom = (d: string) => d !== "" && d.endsWith(".com");
+  const entraNonDotCom = entraTrim !== "" && !isDotCom(entraTrim);
+  const googleNonDotCom = googleTrim !== "" && !isDotCom(googleTrim);
+
   const actuallySubmit = async () => {
     setBusy(true);
     setErr(null);
@@ -101,6 +105,9 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
           {entraBurned && !duplicate && !entraLocked && (
             <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
           )}
+          {entraNonDotCom && !entraBurned && !duplicate && !entraLocked && (
+            <div className="text-gold text-[10px] mt-1 label-eyebrow">NON-.COM · MAY HURT DELIVERABILITY</div>
+          )}
         </div>
         <div>
           <label className="label-eyebrow-dim block mb-1">
@@ -123,6 +130,9 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
           />
           {googleBurned && !duplicate && !googleLocked && (
             <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
+          )}
+          {googleNonDotCom && !googleBurned && !duplicate && !googleLocked && (
+            <div className="text-gold text-[10px] mt-1 label-eyebrow">NON-.COM · MAY HURT DELIVERABILITY</div>
           )}
         </div>
         <button
@@ -149,8 +159,9 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
         >
           Hypertide dashboard
         </a>{" "}
-        first (login required) · Supported TLDs:{" "}
-        <span className="text-text">.com / .net / .org / .info / .biz</span> ·{" "}
+        first (login required) · Recommended TLD:{" "}
+        <span className="text-text">.com</span>{" "}
+        <span className="text-textdim2">(best deliverability; .net/.org/.info/.biz are accepted by Hypertide but discouraged)</span> ·{" "}
         <span className="text-textdim2">Fill only the plan(s) you need — empty fields are skipped.</span>
       </div>
 
