@@ -228,13 +228,14 @@ export default function HypertidePage() {
                     }
                   }}
                   className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow"
-                  title="Backdates the warmup_started_at on every mailbox of this client by 15 days so CHECK WARMUP marks them as completed immediately."
+                  title="Simulation only — backdates warmup_started_at on every mailbox of this client by 15 days so the next CHECK WARMUP marks them complete. In production, the 14-day Smartlead warm-up just runs naturally; this button has no real-flow equivalent."
                 >
                   FAST-FORWARD WARMUP (15d)
                 </button>
                 <button
                   onClick={() => setConfirmReset(true)}
                   className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow"
+                  title="Simulation only — wipes every order, mailbox, pending action, integration, metric, and log entry for this client so the demo can start from a clean slate. In production, there is no equivalent: real domains and mailboxes are wound down through OFFBOARD CLIENT / DEACTIVATE only."
                 >
                   RESET {activeClient.name.toUpperCase()}
                 </button>

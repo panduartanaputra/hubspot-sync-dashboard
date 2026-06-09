@@ -151,6 +151,7 @@ export default function PendingActionsList({
                   <button
                     onClick={() => resolve(a)}
                     disabled={busy === a.id}
+                    title="Simulation only — in production, the email to Hypertide support is sent automatically when SET MASTER is clicked. This button just lets the demo move past that step."
                     className="px-3 py-1 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
                   >
                     MARK REQUESTED
@@ -182,6 +183,7 @@ export default function PendingActionsList({
                     <button
                       onClick={() => resolve(a, { simulate_result: simChoice[a.id] ?? "success" })}
                       disabled={busy === a.id}
+                      title="Simulation only — in production, Unipile connection happens automatically once the mailbox is set up. This button (and the success/fail dropdown next to it) just lets the demo exercise both paths."
                       className="px-3 py-1 border border-purple/40 text-purple hover:bg-purple/10 text-[10px] label-eyebrow disabled:opacity-30"
                     >
                       {failedIntegration ? "RETRY CONNECT" : "STUB CONNECT"}
