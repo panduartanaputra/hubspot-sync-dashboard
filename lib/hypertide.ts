@@ -25,7 +25,8 @@ export type PendingActionType =
   | "connect_unipile"
   | "disconnect_unipile"
   | "replace_approve"
-  | "remove_from_smartlead";
+  | "remove_from_smartlead"
+  | "onboard_replacement";
 
 export type PendingActionStatus = "pending" | "in_progress" | "done" | "skipped";
 

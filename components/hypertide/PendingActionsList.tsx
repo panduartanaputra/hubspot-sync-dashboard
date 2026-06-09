@@ -197,6 +197,15 @@ export default function PendingActionsList({
                     DISCONNECT
                   </button>
                 )}
+                {a.action_type === "onboard_replacement" && (
+                  <button
+                    onClick={() => resolve(a)}
+                    disabled={busy === a.id}
+                    className="px-3 py-1 border border-textdim/40 text-textdim hover:bg-panel2 text-[10px] label-eyebrow disabled:opacity-30"
+                  >
+                    DISMISS
+                  </button>
+                )}
                 {a.action_type === "remove_from_smartlead" && (
                   <button
                     onClick={async () => {
@@ -246,6 +255,23 @@ export default function PendingActionsList({
                 </span>
               </div>
             )}
+            {a.action_type === "onboard_replacement" && (() => {
+              const planRaw = (a.payload as { plan?: string }).plan;
+              const planText = planRaw === "entra" ? "Outlook" : planRaw === "google" ? "Google" : "?";
+              const oldDomain = (a.payload as { old_domain?: string }).old_domain ?? "—";
+              const reason = (a.payload as { reason?: string }).reason;
+              const reasonText = reason === "replacement_approved"
+                ? "Replacement was approved by the health loop."
+                : "Manual deactivation.";
+              return (
+                <div className="mt-2 ml-44 pl-4 border-l-2 border-gold/60 text-[11px] text-textdim">
+                  <span className="label-eyebrow text-gold mr-2">REPLACEMENT NEEDED</span>
+                  {reasonText} Old domain: <span className="font-mono text-text">{oldDomain}</span>.
+                  Use the form above to onboard a new <span className="text-text">{planText}</span> domain.
+                  The reminder will clear automatically once a new {planText} order is created.
+                </div>
+              );
+            })()}
           </li>
         );
       })}
