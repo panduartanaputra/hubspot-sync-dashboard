@@ -212,7 +212,7 @@ export default function HypertidePage() {
           {/* Pending Actions */}
           <section className="mb-6 border border-border bg-panel p-4">
             <div className="label-eyebrow text-gold mb-3">PENDING ACTIONS · {actions.length}</div>
-            <PendingActionsList actions={actions} mailboxes={mailboxes} onChange={refresh} />
+            <PendingActionsList actions={actions} mailboxes={mailboxes} orders={orders} onChange={refresh} />
           </section>
 
           {/* Job log */}

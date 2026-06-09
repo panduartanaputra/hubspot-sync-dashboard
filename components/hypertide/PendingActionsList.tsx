@@ -1,15 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Mailbox, PendingAction, actionLabel, fn } from "@/lib/hypertide";
+import { DomainOrder, Mailbox, PendingAction, actionLabel, fn } from "@/lib/hypertide";
 
 interface Props {
   actions: PendingAction[];
   mailboxes: Mailbox[];
+  orders: DomainOrder[];
   onChange: () => void;
 }
 
-export default function PendingActionsList({ actions, mailboxes, onChange }: Props) {
+/** Hypertide convention: the mailbox whose local part is exactly
+ *  `firstname.lastname` is the admin user on a Google Workspace order.
+ *  For Entra, no admin account is provisioned. */
+function isLikelyGoogleAdmin(email: string): boolean {
+  const local = email.split("@")[0] ?? "";
+  return /^[a-z]+\.[a-z]+$/i.test(local);
+}
+
+export default function PendingActionsList({ actions, mailboxes, orders, onChange }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [masterChoice, setMasterChoice] = useState<Record<string, string>>({});
 
@@ -47,6 +56,8 @@ export default function PendingActionsList({ actions, mailboxes, onChange }: Pro
       {actions.map((a) => {
         const domainMailboxes = mailboxes.filter((m) => m.domain_order_id === a.domain_order_id);
         const domain = (a.payload as { domain?: string })?.domain ?? "—";
+        const order = orders.find((o) => o.id === a.domain_order_id);
+        const isGoogle = order?.plan === "google";
         return (
           <li key={a.id} className="py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -71,12 +82,20 @@ export default function PendingActionsList({ actions, mailboxes, onChange }: Pro
                     className="bg-panel2 border border-border2 px-2 py-1 text-xs text-texthi"
                   >
                     <option value="">-- pick master --</option>
-                    {domainMailboxes.map((m) => (
-                      <option key={m.id} value={m.email}>
-                        {m.email}
-                      </option>
-                    ))}
+                    {domainMailboxes.map((m) => {
+                      const adminTag = isGoogle && isLikelyGoogleAdmin(m.email) ? " — ADMIN" : "";
+                      return (
+                        <option key={m.id} value={m.email}>
+                          {m.email}{adminTag}
+                        </option>
+                      );
+                    })}
                   </select>
+                  {isGoogle && (
+                    <span className="text-[10px] text-cyan label-eyebrow-dim ml-1">
+                      pick firstname.lastname
+                    </span>
+                  )}
                   <button
                     onClick={() => resolve(a, { master_inbox: masterChoice[a.id] })}
                     disabled={busy === a.id || !masterChoice[a.id]}

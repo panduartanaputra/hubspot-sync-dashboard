@@ -71,7 +71,12 @@ export interface Mailbox {
   last_name: string | null;
   is_master: boolean;
   send_as_granted_at: string | null;
-  forwarding_configured_at: string | null;
+  /** Renamed from forwarding_configured_at. Hypertide uses BCC-at-mail-server
+   *  forwarding, where each non-master mailbox has the master added as a BCC
+   *  recipient at delivery time. Original mailbox keeps the email + master
+   *  receives a copy. The To: header in master's inbox still shows the
+   *  original alias, so routing automation can identify the intended recipient. */
+  bcc_forwarding_configured_at: string | null;
 }
 
 export interface PendingAction {
