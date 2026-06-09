@@ -35,7 +35,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
   const [filter, setFilter] = useState<FilterMode>("active");
 
   const deactivate = async (orderId: string, domain: string) => {
-    if (!confirm(`Deactivate "${domain}"? This schedules a Stripe subscription cancellation, will disconnect Unipile, and the domain will be marked cancelled at the end of the wind-down. You can REVERT until the cancellation executes.`)) return;
+    if (!confirm(`Start the wind-down for "${domain}"?\n\nThis kicks off a 24-hour countdown. Nothing actually changes during those 24 hours — you can hit REVERT at any time to undo this. After 24 hours: the Hypertide subscription is cancelled, mailboxes are removed from Smartlead, and Unipile is disconnected.`)) return;
     setBusy(orderId);
     try {
       await fn.cancelSubscription({ action: "cancel", domain_order_ids: [orderId] });
@@ -48,7 +48,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
   };
 
   const revert = async (orderId: string, domain: string) => {
-    if (!confirm(`Revert the scheduled cancellation for "${domain}"?\n\nFull undo: the order returns to its previous live state (done or done_pre_unipile). Because the 24h finalize hasn't fired yet, Unipile is still connected and Smartlead hasn't been touched — nothing needs to be re-done.`)) return;
+    if (!confirm(`Cancel the wind-down for "${domain}"?\n\nThe order goes back to fully active. Because the 24-hour countdown hasn't finished, nothing was actually changed — no need to redo any setup.`)) return;
     setBusy(orderId);
     try {
       await fn.cancelSubscription({ action: "revert", domain_order_ids: [orderId] });
@@ -61,7 +61,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
   };
 
   const discard = async (orderId: string, domain: string) => {
-    if (!confirm(`Discard the pending order for "${domain}"? No payment was made, so this just removes the in-flight order.`)) return;
+    if (!confirm(`Drop the unpaid order for "${domain}"?\n\nNothing was charged yet, so this just removes it from our list. Hypertide is not affected.`)) return;
     setBusy(orderId);
     try {
       await fn.discardOrder({ domain_order_id: orderId });

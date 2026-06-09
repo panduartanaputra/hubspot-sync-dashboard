@@ -297,12 +297,13 @@ export default function HypertidePage() {
               You're about to offboard <span className="text-gold font-bold">{activeClient.name}</span>.
             </p>
             <p className="text-xs text-textdim mb-4 leading-relaxed">
-              This will schedule the 24h wind-down on <span className="text-cyan">{activeOrderCount}</span> active
-              domain order{activeOrderCount === 1 ? "" : "s"}, skip any open onboarding pending actions, and mark
-              the client as offboarded. <span className="text-text">During the 24h window nothing else is touched</span> —
-              Unipile stays connected and Smartlead is untouched, so you can REVERT any domain for a clean
-              full-undo. After 24h the finalize step removes mailboxes from Smartlead, disconnects Unipile, and
-              flips each order to cancelled.
+              Start the wind-down for all{" "}
+              <span className="text-cyan">{activeOrderCount}</span> active
+              domain{activeOrderCount === 1 ? "" : "s"} this client has.
+              <br /><br />
+              <span className="text-text">For the next 24 hours nothing actually changes</span> — you can REVERT
+              any individual domain if you change your mind. After 24 hours, every domain gets cancelled at
+              Hypertide, mailboxes are removed from Smartlead, and Unipile is disconnected.
             </p>
             <div className="flex justify-end gap-3">
               <button

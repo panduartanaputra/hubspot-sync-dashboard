@@ -64,10 +64,10 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, onDo
       return;
     }
     // Generic safety-net confirmation
-    const lines: string[] = ["Start onboarding the following?"];
+    const lines: string[] = ["Start the new order(s) below?"];
     if (entraTrim && !entraLocked) lines.push(`• Outlook: ${entraTrim}`);
     if (googleTrim && !googleLocked) lines.push(`• Google:  ${googleTrim}`);
-    lines.push("", "An order will be placed with Hypertide for each.");
+    lines.push("", "We'll place the order(s) with Hypertide. Nothing gets charged yet — you'll approve payment in the next step.");
     if (!confirm(lines.join("\n"))) return;
 
     if (anyBurned) {

@@ -50,8 +50,8 @@ export default function PendingActionsList({
     if (!a.domain_order_id) return;
     const domain = (a.payload as { domain?: string })?.domain ?? "this order";
     const rawPlan = (a.payload as { plan?: string })?.plan;
-    const planText = rawPlan === "entra" ? "OUTLOOK" : rawPlan === "google" ? "GOOGLE" : "";
-    if (!confirm(`Finalize payment for ${planText} order on "${domain}"?\n\nThis charges the client's saved payment method via Hypertide. The order will move from pending_payment → paid and start provisioning.`)) return;
+    const planText = rawPlan === "entra" ? "Outlook" : rawPlan === "google" ? "Google" : "";
+    if (!confirm(`Pay Hypertide for the ${planText} order on "${domain}"?\n\nThis finalizes the purchase on our card. Hypertide will then start buying the domain and setting up the mailboxes — usually 3–6 hours.`)) return;
     setBusy(a.id);
     try {
       await fn.approvePayment({ domain_order_ids: [a.domain_order_id] });
@@ -70,7 +70,7 @@ export default function PendingActionsList({
       const chosen = (payload as { master_inbox?: string } | undefined)?.master_inbox;
       const domain = (a.payload as { domain?: string })?.domain ?? "this domain";
       if (!chosen) return;
-      if (!confirm(`Set master inbox for "${domain}" to:\n\n  ${chosen}\n\nThis tells Hypertide which mailbox should act as the central master (Send-As source + BCC-forwarding destination). Changing it later requires a manual support request.`)) return;
+      if (!confirm(`Make "${chosen}" the master inbox for "${domain}"?\n\nThe master inbox is the single mailbox that receives copies of every email sent to this domain and sends out on behalf of the others. Changing it later means asking Hypertide support manually, so pick carefully.`)) return;
     }
     setBusy(a.id);
     try {
