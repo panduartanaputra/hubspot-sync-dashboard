@@ -266,6 +266,11 @@ export const fn = {
       "hypertide-smartlead-remove",
       args
     ),
+  resetClient: (args: { client_id: string }) =>
+    invoke<{ success: boolean; client: string; removed: { orders: number; mailboxes: number; pending_actions: number } }>(
+      "hypertide-reset-client",
+      args
+    ),
 };
 
 // ============ STATUS COLOR HELPERS ============

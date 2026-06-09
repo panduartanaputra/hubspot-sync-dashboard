@@ -40,6 +40,9 @@ export default function HypertidePage() {
   const [integrations, setIntegrations] = useState<IntegrationConnection[]>([]);
   const [confirmOffboard, setConfirmOffboard] = useState(false);
   const [offboardingBusy, setOffboardingBusy] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -116,6 +119,23 @@ export default function HypertidePage() {
     }
   };
 
+  const runResetClient = async () => {
+    if (!activeClient) return;
+    setResetBusy(true);
+    setResetMsg(null);
+    try {
+      const r = await fn.resetClient({ client_id: activeClient.id });
+      setResetMsg(`Reset complete: removed ${r.removed.orders} orders, ${r.removed.mailboxes} mailboxes, ${r.removed.pending_actions} pending actions.`);
+      setConfirmReset(false);
+      refresh();
+      loadClients();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
   return (
     <main className="min-h-screen px-8 py-7 max-w-[1600px] mx-auto">
       {/* Header bar */}
@@ -175,18 +195,36 @@ export default function HypertidePage() {
       ) : (
         <>
           {/* Simulation strip */}
-          <section className="mb-6 border border-border bg-panel p-4 flex items-center justify-between">
-            <div>
-              <div className="label-eyebrow text-gold mb-1">SIMULATION</div>
-              <div className="text-xs text-textdim">
-                {activeClient.name} · forwarding {activeClient.forwarding_domain} · monthly limit $
-                {billing?.monthly_limit_usd ?? "—"} · auto-replace{" "}
-                <span className={billing?.auto_replace_enabled ? "text-green" : "text-textdim"}>
-                  {billing?.auto_replace_enabled ? "ON" : "OFF"}
-                </span>
+          <section className="mb-6 border border-border bg-panel p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="label-eyebrow text-gold mb-1">SIMULATION</div>
+                <div className="text-xs text-textdim">
+                  {activeClient.name} · forwarding {activeClient.forwarding_domain} · monthly limit $
+                  {billing?.monthly_limit_usd ?? "—"} · auto-replace{" "}
+                  <span className={billing?.auto_replace_enabled ? "text-green" : "text-textdim"}>
+                    {billing?.auto_replace_enabled ? "ON" : "OFF"}
+                  </span>
+                </div>
+              </div>
+              <SimControls sim={sim} onChange={refresh} />
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+              <div className="text-[10px] text-textdim2 label-eyebrow-dim">
+                DEMO TOOLS · only available in full_mock mode
+              </div>
+              <div className="flex items-center gap-3">
+                {resetMsg && (
+                  <span className="text-[10px] text-green">{resetMsg}</span>
+                )}
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow"
+                >
+                  RESET {activeClient.name.toUpperCase()}
+                </button>
               </div>
             </div>
-            <SimControls sim={sim} onChange={refresh} />
           </section>
 
           {/* Onboard new */}
@@ -286,6 +324,41 @@ export default function HypertidePage() {
             </ul>
           </section>
         </>
+      )}
+
+      {/* RESET CLIENT confirmation modal */}
+      {confirmReset && activeClient && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8">
+          <div className="bg-panel border border-red/60 max-w-lg w-full p-6">
+            <div className="label-eyebrow text-red mb-3">⚠ RESET DEMO DATA</div>
+            <p className="text-xs text-text mb-2 leading-relaxed">
+              Wipe all simulation data for <span className="text-gold font-bold">{activeClient.name}</span>?
+            </p>
+            <p className="text-xs text-textdim mb-4 leading-relaxed">
+              This deletes every order, mailbox, pending action, integration, metric, and log entry
+              tied to this client, and sets the client back to <span className="text-text">active</span>.
+              The client row itself stays. Other clients are untouched.
+              <br /><br />
+              Use this to start the demo from scratch. <span className="text-red">Cannot be undone.</span>
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmReset(false)}
+                disabled={resetBusy}
+                className="px-4 py-2 text-xs label-eyebrow border border-border2 text-textdim hover:bg-panel2 disabled:opacity-30"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={runResetClient}
+                disabled={resetBusy}
+                className="px-4 py-2 text-xs label-eyebrow border border-red/60 text-red hover:bg-red/10 disabled:opacity-30"
+              >
+                {resetBusy ? "RESETTING…" : "RESET"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* OFFBOARD CLIENT confirmation modal */}
