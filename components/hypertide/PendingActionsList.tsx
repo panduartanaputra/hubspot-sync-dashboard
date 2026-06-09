@@ -9,6 +9,29 @@ import {
   actionLabel,
   fn,
 } from "@/lib/hypertide";
+import HelpIcon from "./HelpIcon";
+
+const MARK_REQUESTED_HELP = {
+  title: "MARK REQUESTED",
+  body: [
+    "Simulation only.",
+    "",
+    "In production, the email to Hypertide support is sent automatically as soon as the master inbox is set.",
+    "",
+    "This button just lets the demo move past that step without sending a real email.",
+  ],
+};
+
+const STUB_CONNECT_HELP = {
+  title: "STUB CONNECT",
+  body: [
+    "Simulation only.",
+    "",
+    "In production, Unipile connection happens automatically once the mailbox is set up.",
+    "",
+    "This button (and the Success / Fail dropdown next to it) just lets the demo exercise both happy-path and failure paths on demand.",
+  ],
+};
 
 interface Props {
   actions: PendingAction[];
@@ -148,14 +171,16 @@ export default function PendingActionsList({
                   </>
                 )}
                 {a.action_type === "request_send_as" && (
-                  <button
-                    onClick={() => resolve(a)}
-                    disabled={busy === a.id}
-                    title="Simulation only — in production, the email to Hypertide support is sent automatically when SET MASTER is clicked. This button just lets the demo move past that step."
-                    className="px-3 py-1 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
-                  >
-                    MARK REQUESTED
-                  </button>
+                  <>
+                    <button
+                      onClick={() => resolve(a)}
+                      disabled={busy === a.id}
+                      className="px-3 py-1 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
+                    >
+                      MARK REQUESTED
+                    </button>
+                    <HelpIcon help={MARK_REQUESTED_HELP} tone="cyan" />
+                  </>
                 )}
                 {a.action_type === "confirm_send_as" && (
                   <button
@@ -183,11 +208,11 @@ export default function PendingActionsList({
                     <button
                       onClick={() => resolve(a, { simulate_result: simChoice[a.id] ?? "success" })}
                       disabled={busy === a.id}
-                      title="Simulation only — in production, Unipile connection happens automatically once the mailbox is set up. This button (and the success/fail dropdown next to it) just lets the demo exercise both paths."
                       className="px-3 py-1 border border-purple/40 text-purple hover:bg-purple/10 text-[10px] label-eyebrow disabled:opacity-30"
                     >
                       {failedIntegration ? "RETRY CONNECT" : "STUB CONNECT"}
                     </button>
+                    <HelpIcon help={STUB_CONNECT_HELP} tone="purple" />
                   </>
                 )}
                 {a.action_type === "disconnect_unipile" && (

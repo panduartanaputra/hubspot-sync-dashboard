@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SimulationConfig, fn } from "@/lib/hypertide";
+import HelpIcon from "./HelpIcon";
 
 interface Props {
   sim: SimulationConfig | null;
@@ -70,42 +71,6 @@ const WARMUP_HELP = {
     "In production this runs hourly via cron (currently disabled).",
   ],
 };
-
-function HelpIcon({ help }: { help: { title: string; body: string[] } }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="relative inline-flex items-center ml-1.5">
-      <span
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        tabIndex={0}
-        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full border border-gold/60 text-gold text-[11px] cursor-help select-none bg-panel hover:bg-gold/10 font-bold leading-none"
-        aria-label={`${help.title} help`}
-      >
-        ?
-      </span>
-      {open && (
-        <span
-          role="tooltip"
-          className="absolute top-full right-0 mt-2 z-50 w-80 bg-panel2 border border-gold/40 p-3 text-[11px] text-text leading-relaxed shadow-xl"
-        >
-          <span className="block label-eyebrow text-gold mb-2">{help.title}</span>
-          {help.body.map((line, i) =>
-            line === "" ? (
-              <span key={i} className="block h-2" />
-            ) : (
-              <span key={i} className="block text-textdim">
-                {line}
-              </span>
-            )
-          )}
-        </span>
-      )}
-    </span>
-  );
-}
 
 export default function SimControls({ sim, onChange }: Props) {
   const [busy, setBusy] = useState<string | null>(null);

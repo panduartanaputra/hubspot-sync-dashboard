@@ -6,6 +6,29 @@ import DomainOrdersTable from "@/components/hypertide/DomainOrdersTable";
 import PendingActionsList from "@/components/hypertide/PendingActionsList";
 import SimControls from "@/components/hypertide/SimControls";
 import BurnedDomainsTable from "@/components/hypertide/BurnedDomainsTable";
+import HelpIcon from "@/components/hypertide/HelpIcon";
+
+const FAST_FORWARD_HELP = {
+  title: "FAST-FORWARD WARMUP (15d)",
+  body: [
+    "Simulation only.",
+    "",
+    "Backdates warmup_started_at on every mailbox of this client by 15 days so the next CHECK WARMUP marks them as completed immediately.",
+    "",
+    "In production, Smartlead's 14-day warm-up just runs naturally — this button has no real-flow equivalent.",
+  ],
+};
+
+const RESET_CLIENT_HELP = {
+  title: "RESET CLIENT",
+  body: [
+    "Simulation only.",
+    "",
+    "Wipes every order, mailbox, pending action, integration, metric, and log entry for this client so the demo can start from a clean slate.",
+    "",
+    "In production there is no equivalent: real domains and mailboxes are wound down through OFFBOARD CLIENT / DEACTIVATE only.",
+  ],
+};
 import {
   BillingConfig,
   Client,
@@ -228,17 +251,17 @@ export default function HypertidePage() {
                     }
                   }}
                   className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow"
-                  title="Simulation only — backdates warmup_started_at on every mailbox of this client by 15 days so the next CHECK WARMUP marks them complete. In production, the 14-day Smartlead warm-up just runs naturally; this button has no real-flow equivalent."
                 >
                   FAST-FORWARD WARMUP (15d)
                 </button>
+                <HelpIcon help={FAST_FORWARD_HELP} tone="green" />
                 <button
                   onClick={() => setConfirmReset(true)}
                   className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow"
-                  title="Simulation only — wipes every order, mailbox, pending action, integration, metric, and log entry for this client so the demo can start from a clean slate. In production, there is no equivalent: real domains and mailboxes are wound down through OFFBOARD CLIENT / DEACTIVATE only."
                 >
                   RESET {activeClient.name.toUpperCase()}
                 </button>
+                <HelpIcon help={RESET_CLIENT_HELP} tone="red" />
               </div>
             </div>
           </section>
