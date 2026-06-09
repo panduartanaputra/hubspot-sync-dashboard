@@ -33,7 +33,8 @@ export interface Client {
   name: string;
   forwarding_domain: string;
   contact_email: string | null;
-  status: string;
+  status: string; // 'active' | 'offboarded'
+  offboarded_at: string | null;
   created_at: string;
 }
 
@@ -225,6 +226,11 @@ export const fn = {
   resolveAction: (args: { pending_action_id: string; payload?: Record<string, unknown> }) =>
     invoke("hypertide-resolve-action", args),
   discardOrder: (args: { domain_order_id: string }) => invoke("hypertide-discard-order", args),
+  offboardClient: (args: { client_id: string }) =>
+    invoke<{ success: boolean; client: string; summary: { discarded: number; offboarded: number; skipped_actions: number } }>(
+      "hypertide-offboard-client",
+      args
+    ),
 };
 
 // ============ STATUS COLOR HELPERS ============

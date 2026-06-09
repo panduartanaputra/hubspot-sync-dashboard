@@ -23,6 +23,7 @@ import {
   fetchMailboxes,
   fetchPendingActions,
   fetchSimConfig,
+  fn,
 } from "@/lib/hypertide";
 
 export default function HypertidePage() {
@@ -35,6 +36,8 @@ export default function HypertidePage() {
   const [sim, setSim] = useState<SimulationConfig | null>(null);
   const [jobLog, setJobLog] = useState<JobLogRow[]>([]);
   const [burned, setBurned] = useState<DomainOrder[]>([]);
+  const [confirmOffboard, setConfirmOffboard] = useState(false);
+  const [offboardingBusy, setOffboardingBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -89,6 +92,25 @@ export default function HypertidePage() {
   }, [refresh]);
 
   const activeClient = clients.find((c) => c.id === activeClientId) ?? null;
+  const isOffboarded = activeClient?.status === "offboarded";
+  const activeOrderCount = orders.filter((o) =>
+    ["pending_payment", "paid", "provisioning", "done_pre_unipile", "done", "replacing", "cancelling"].includes(o.status)
+  ).length;
+
+  const runOffboardClient = async () => {
+    if (!activeClient) return;
+    setOffboardingBusy(true);
+    try {
+      await fn.offboardClient({ client_id: activeClient.id });
+      setConfirmOffboard(false);
+      refresh();
+      loadClients();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOffboardingBusy(false);
+    }
+  };
 
   return (
     <main className="min-h-screen px-8 py-7 max-w-[1600px] mx-auto">
@@ -112,10 +134,26 @@ export default function HypertidePage() {
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                  {c.status === "offboarded" ? " · OFFBOARDED" : ""}
                 </option>
               ))}
             </select>
           </div>
+          {activeClient && (
+            isOffboarded ? (
+              <span className="text-[10px] label-eyebrow text-red border border-red/40 px-2 py-1 self-end">
+                OFFBOARDED
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmOffboard(true)}
+                className="text-[10px] label-eyebrow text-red border border-red/40 px-2 py-1 hover:bg-red/10 self-end"
+                title="Wind down all active domain orders for this client + mark the client as offboarded."
+              >
+                OFFBOARD CLIENT
+              </button>
+            )
+          )}
           <Link href="/" className="text-xs text-textdim hover:text-gold label-eyebrow-dim">
             ← SYNC COCKPIT
           </Link>
@@ -236,6 +274,40 @@ export default function HypertidePage() {
             </ul>
           </section>
         </>
+      )}
+
+      {/* OFFBOARD CLIENT confirmation modal */}
+      {confirmOffboard && activeClient && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8">
+          <div className="bg-panel border border-red/60 max-w-lg w-full p-6">
+            <div className="label-eyebrow text-red mb-3">⚠ OFFBOARD CLIENT</div>
+            <p className="text-xs text-text mb-2 leading-relaxed">
+              You're about to offboard <span className="text-gold font-bold">{activeClient.name}</span>.
+            </p>
+            <p className="text-xs text-textdim mb-4 leading-relaxed">
+              This will schedule cancellation on <span className="text-cyan">{activeOrderCount}</span> active
+              domain order{activeOrderCount === 1 ? "" : "s"}, open disconnect actions for any Unipile-connected
+              mailboxes, skip any open onboarding pending actions, and mark the client as offboarded. You can
+              still REVERT individual domains during their 24h Stripe wind-down window.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmOffboard(false)}
+                disabled={offboardingBusy}
+                className="px-4 py-2 text-xs label-eyebrow border border-border2 text-textdim hover:bg-panel2 disabled:opacity-30"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={runOffboardClient}
+                disabled={offboardingBusy}
+                className="px-4 py-2 text-xs label-eyebrow border border-red/60 text-red hover:bg-red/10 disabled:opacity-30"
+              >
+                {offboardingBusy ? "OFFBOARDING…" : "OFFBOARD"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
