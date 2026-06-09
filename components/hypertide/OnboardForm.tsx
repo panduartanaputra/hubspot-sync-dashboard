@@ -1,25 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fn } from "@/lib/hypertide";
 
 interface Props {
   clientId: string;
   burnedDomains: string[];        // lowercase domain strings of cancelled/failed prior orders
-  activePlans: Array<"entra" | "google">; // which plans this client already has an in-flight order on
+  activePlans: Array<"entra" | "google">; // plans with a live in-flight or done order
+  cancellingPlans: Array<"entra" | "google">; // plans with an order currently winding down (REVERTable)
   activeDomains: string[];        // lowercase domain strings of any currently-active orders (any client)
   onDone: () => void;
 }
 
-export default function OnboardForm({ clientId, burnedDomains, activePlans, activeDomains, onDone }: Props) {
+export default function OnboardForm({ clientId, burnedDomains, activePlans, cancellingPlans, activeDomains, onDone }: Props) {
   const [entra, setEntra] = useState("");
   const [google, setGoogle] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [confirmingBurn, setConfirmingBurn] = useState(false);
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false);
 
-  const entraLocked = activePlans.includes("entra");
-  const googleLocked = activePlans.includes("google");
+  // Reset form state when client changes — stale errors/inputs from a previous client must not leak across.
+  useEffect(() => {
+    setEntra("");
+    setGoogle("");
+    setErr(null);
+    setConfirmingBurn(false);
+    setConfirmingSubmit(false);
+  }, [clientId]);
+
+  const entraActive = activePlans.includes("entra");
+  const googleActive = activePlans.includes("google");
+  const entraCancelling = cancellingPlans.includes("entra");
+  const googleCancelling = cancellingPlans.includes("google");
+  const entraLocked = entraActive || entraCancelling;
+  const googleLocked = googleActive || googleCancelling;
 
   const entraTrim = entra.trim().toLowerCase();
   const googleTrim = google.trim().toLowerCase();
@@ -42,10 +57,14 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
   const googleConflict = googleTrim !== "" && activeSet.has(googleTrim);
   const anyConflict = entraConflict || googleConflict;
 
+  const setEntraAndClearErr = (v: string) => { setEntra(v); if (err) setErr(null); };
+  const setGoogleAndClearErr = (v: string) => { setGoogle(v); if (err) setErr(null); };
+
   const actuallySubmit = async () => {
     setBusy(true);
     setErr(null);
     setConfirmingBurn(false);
+    setConfirmingSubmit(false);
     try {
       await fn.createOnboarding({
         client_id: clientId,
@@ -62,7 +81,7 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
     }
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (nothingFilled) return;
     if (duplicate) {
@@ -73,18 +92,17 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
       setErr("One of the domains is already used by an active order. Pick a different name.");
       return;
     }
-    // Generic safety-net confirmation
-    const lines: string[] = ["Start the new order(s) below?"];
-    if (entraTrim && !entraLocked) lines.push(`• Outlook: ${entraTrim}`);
-    if (googleTrim && !googleLocked) lines.push(`• Google:  ${googleTrim}`);
-    lines.push("", "We'll place the order(s) with Hypertide. Nothing gets charged yet — you'll approve payment in the next step.");
-    if (!confirm(lines.join("\n"))) return;
+    setErr(null);
+    setConfirmingSubmit(true);
+  };
 
+  const proceedFromSubmitConfirm = () => {
+    setConfirmingSubmit(false);
     if (anyBurned) {
       setConfirmingBurn(true);
       return;
     }
-    await actuallySubmit();
+    void actuallySubmit();
   };
 
   const buttonLabel = (() => {
@@ -96,6 +114,11 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
     if (filled.length === 0) return "START ONBOARDING";
     return `START ${filled.join(" + ")}`;
   })();
+
+  const lockLabel = (active: boolean, cancelling: boolean) =>
+    active ? "(already active)" : cancelling ? "(cancelling — REVERT or wait)" : null;
+  const entraLockLabel = lockLabel(entraActive, entraCancelling);
+  const googleLockLabel = lockLabel(googleActive, googleCancelling);
 
   const entraTag = entraConflict && !duplicate && !entraLocked
     ? { color: "text-red", text: "ALREADY USED BY AN ACTIVE ORDER" }
@@ -118,11 +141,11 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="label-eyebrow-dim block mb-1">
-              OUTLOOK DOMAIN {entraLocked && <span className="text-textdim2">(already active)</span>}
+              OUTLOOK DOMAIN {entraLockLabel && <span className="text-textdim2">{entraLockLabel}</span>}
             </label>
             <input
               value={entra}
-              onChange={(e) => setEntra(e.target.value)}
+              onChange={(e) => setEntraAndClearErr(e.target.value)}
               placeholder={entraLocked ? "—" : "outreach-outlook.com"}
               className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
                 entraLocked
@@ -138,11 +161,11 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
           </div>
           <div>
             <label className="label-eyebrow-dim block mb-1">
-              GOOGLE DOMAIN {googleLocked && <span className="text-textdim2">(already active)</span>}
+              GOOGLE DOMAIN {googleLockLabel && <span className="text-textdim2">{googleLockLabel}</span>}
             </label>
             <input
               value={google}
-              onChange={(e) => setGoogle(e.target.value)}
+              onChange={(e) => setGoogleAndClearErr(e.target.value)}
               placeholder={googleLocked ? "—" : "outreach-google.com"}
               className={`bg-panel2 border px-3 py-2 text-xs w-56 outline-none ${
                 googleLocked
@@ -204,6 +227,43 @@ export default function OnboardForm({ clientId, burnedDomains, activePlans, acti
         <span className="text-textdim2">(best deliverability; .net/.org/.info/.biz are accepted by Hypertide but discouraged)</span> ·{" "}
         <span className="text-textdim2">Fill only the plan(s) you need — empty fields are skipped.</span>
       </div>
+
+      {/* Submit confirmation overlay (replaces blocking native confirm) */}
+      {confirmingSubmit && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8">
+          <div className="bg-panel border border-gold/60 max-w-lg w-full p-6">
+            <div className="label-eyebrow text-gold mb-3">START NEW ORDER</div>
+            <p className="text-xs text-text mb-3 leading-relaxed">
+              Place the following order{(entraTrim && !entraLocked) && (googleTrim && !googleLocked) ? "s" : ""} with Hypertide?
+            </p>
+            <ul className="mb-4 text-xs space-y-1 font-mono">
+              {entraTrim && !entraLocked && (
+                <li className="text-text">• Outlook: <span className="text-gold">{entraTrim}</span></li>
+              )}
+              {googleTrim && !googleLocked && (
+                <li className="text-text">• Google: <span className="text-gold">{googleTrim}</span></li>
+              )}
+            </ul>
+            <p className="text-xs text-textdim mb-6 leading-relaxed">
+              Nothing gets charged yet — you'll approve payment in the next step.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmingSubmit(false)}
+                className="px-4 py-2 text-xs label-eyebrow border border-border2 text-textdim hover:bg-panel2"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={proceedFromSubmitConfirm}
+                className="px-4 py-2 text-xs label-eyebrow border border-gold/60 text-gold hover:bg-gold/10"
+              >
+                PROCEED
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Burned-domain confirmation overlay */}
       {confirmingBurn && (

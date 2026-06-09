@@ -273,9 +273,13 @@ export default function HypertidePage() {
                       "done_pre_unipile",
                       "done",
                       "replacing",
-                      "cancelling",
                     ].includes(o.status)
                   )
+                  .map((o) => o.plan)
+              }
+              cancellingPlans={
+                orders
+                  .filter((o) => o.status === "cancelling")
                   .map((o) => o.plan)
               }
               activeDomains={orders
