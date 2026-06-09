@@ -249,7 +249,12 @@ export default function HypertidePage() {
             <div className="flex items-center justify-between mb-3">
               <div className="label-eyebrow text-gold">DOMAIN ORDERS · {orders.length}</div>
             </div>
-            <DomainOrdersTable orders={orders} mailboxes={mailboxes} onChange={refresh} />
+            <DomainOrdersTable
+              orders={orders}
+              mailboxes={mailboxes}
+              integrations={integrations}
+              onChange={refresh}
+            />
           </section>
 
           {/* Pending Actions */}
