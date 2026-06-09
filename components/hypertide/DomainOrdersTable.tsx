@@ -46,7 +46,8 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
     }
   };
 
-  const revert = async (orderId: string) => {
+  const revert = async (orderId: string, domain: string) => {
+    if (!confirm(`Revert the scheduled cancellation for "${domain}"?\n\nThe order will return to done_pre_unipile and remain active. This only works if the Stripe cancellation has not yet executed.`)) return;
     setBusy(orderId);
     try {
       await fn.cancelSubscription({ action: "revert", domain_order_ids: [orderId] });
@@ -179,7 +180,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
                     )}
                     {o.status === "cancelling" && (
                       <button
-                        onClick={() => revert(o.id)}
+                        onClick={() => revert(o.id, o.domain)}
                         disabled={busy === o.id}
                         className="px-2 py-1 border border-blue/40 text-blue hover:bg-blue/10 text-[10px] label-eyebrow disabled:opacity-30"
                       >

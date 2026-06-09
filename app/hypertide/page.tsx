@@ -209,7 +209,7 @@ export default function HypertidePage() {
               <span className="text-cyan font-mono">{activeClient.forwarding_domain}</span>{" "}
               as the basis for the new outreach domains you purchase from Hypertide
               (e.g. <span className="text-text">try-{activeClient.forwarding_domain.split(".")[0]}.com</span>,{" "}
-              <span className="text-text">go-{activeClient.forwarding_domain.split(".")[0]}.net</span>).
+              <span className="text-text">go-{activeClient.forwarding_domain.split(".")[0]}.com</span>).
             </div>
             <OnboardForm
               clientId={activeClient.id}
