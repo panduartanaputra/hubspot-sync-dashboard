@@ -141,6 +141,17 @@ export async function fetchDomainOrders(clientId: string): Promise<DomainOrder[]
   return (data ?? []) as DomainOrder[];
 }
 
+export async function fetchBurnedDomains(clientId: string): Promise<DomainOrder[]> {
+  const { data, error } = await ht()
+    .from("domain_orders")
+    .select("*")
+    .eq("client_id", clientId)
+    .in("status", ["cancelled", "failed"])
+    .order("done_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as DomainOrder[];
+}
+
 export async function fetchMailboxes(orderIds: string[]): Promise<Mailbox[]> {
   if (orderIds.length === 0) return [];
   const { data, error } = await ht().from("mailboxes").select("*").in("domain_order_id", orderIds);

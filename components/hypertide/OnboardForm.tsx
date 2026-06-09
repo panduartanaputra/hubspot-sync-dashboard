@@ -5,28 +5,30 @@ import { fn } from "@/lib/hypertide";
 
 interface Props {
   clientId: string;
+  burnedDomains: string[]; // lowercase domain strings of cancelled/failed prior orders
   onDone: () => void;
 }
 
-export default function OnboardForm({ clientId, onDone }: Props) {
+export default function OnboardForm({ clientId, burnedDomains, onDone }: Props) {
   const [entra, setEntra] = useState("");
   const [google, setGoogle] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [confirmingBurn, setConfirmingBurn] = useState(false);
 
   const entraTrim = entra.trim().toLowerCase();
   const googleTrim = google.trim().toLowerCase();
   const duplicate = entraTrim !== "" && entraTrim === googleTrim;
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!entra || !google) return;
-    if (duplicate) {
-      setErr("Entra and Google domains must be different — a domain cannot exist on both M365 and Google Workspace at the same time.");
-      return;
-    }
+  const burnedSet = new Set(burnedDomains.map((d) => d.toLowerCase()));
+  const entraBurned = entraTrim !== "" && burnedSet.has(entraTrim);
+  const googleBurned = googleTrim !== "" && burnedSet.has(googleTrim);
+  const anyBurned = entraBurned || googleBurned;
+
+  const actuallySubmit = async () => {
     setBusy(true);
     setErr(null);
+    setConfirmingBurn(false);
     try {
       await fn.createOnboarding({ client_id: clientId, entra_domain: entraTrim, google_domain: googleTrim });
       setEntra("");
@@ -39,6 +41,20 @@ export default function OnboardForm({ clientId, onDone }: Props) {
     }
   };
 
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!entra || !google) return;
+    if (duplicate) {
+      setErr("Entra and Google domains must be different — a domain cannot exist on both M365 and Google Workspace at the same time.");
+      return;
+    }
+    if (anyBurned) {
+      setConfirmingBurn(true);
+      return;
+    }
+    await actuallySubmit();
+  };
+
   return (
     <div>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
@@ -49,10 +65,17 @@ export default function OnboardForm({ clientId, onDone }: Props) {
             onChange={(e) => setEntra(e.target.value)}
             placeholder="outreach-entra.com"
             className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
-              duplicate ? "border-red focus:border-red" : "border-border2 focus:border-gold"
+              duplicate
+                ? "border-red focus:border-red"
+                : entraBurned
+                ? "border-purple focus:border-purple"
+                : "border-border2 focus:border-gold"
             }`}
             disabled={busy}
           />
+          {entraBurned && !duplicate && (
+            <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
+          )}
         </div>
         <div>
           <label className="label-eyebrow-dim block mb-1">GOOGLE DOMAIN</label>
@@ -61,10 +84,17 @@ export default function OnboardForm({ clientId, onDone }: Props) {
             onChange={(e) => setGoogle(e.target.value)}
             placeholder="outreach-google.com"
             className={`bg-panel2 border px-3 py-2 text-xs text-texthi w-56 outline-none ${
-              duplicate ? "border-red focus:border-red" : "border-border2 focus:border-gold"
+              duplicate
+                ? "border-red focus:border-red"
+                : googleBurned
+                ? "border-purple focus:border-purple"
+                : "border-border2 focus:border-gold"
             }`}
             disabled={busy}
           />
+          {googleBurned && !duplicate && (
+            <div className="text-purple text-[10px] mt-1 label-eyebrow">BURNED PREVIOUSLY</div>
+          )}
         </div>
         <button
           type="submit"
@@ -78,6 +108,7 @@ export default function OnboardForm({ clientId, onDone }: Props) {
         )}
         {err && !duplicate && <div className="text-red text-xs ml-2">{err}</div>}
       </form>
+
       <div className="text-[10px] text-textdim mt-3 leading-relaxed">
         Mode: <span className="text-gold">purchase_domain_for_me</span> ·{" "}
         Check availability in the{" "}
@@ -92,6 +123,45 @@ export default function OnboardForm({ clientId, onDone }: Props) {
         first (login required) · Supported TLDs:{" "}
         <span className="text-text">.com / .net / .org / .info / .biz</span>
       </div>
+
+      {/* Burned-domain confirmation overlay */}
+      {confirmingBurn && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8">
+          <div className="bg-panel border border-purple/60 max-w-lg w-full p-6">
+            <div className="label-eyebrow text-purple mb-3">⚠ BURNED DOMAIN WARNING</div>
+            <p className="text-xs text-text mb-4 leading-relaxed">
+              The following domain{entraBurned && googleBurned ? "s have" : " has"} previously
+              been used and retired for this client:
+            </p>
+            <ul className="mb-4 text-xs space-y-1 font-mono">
+              {entraBurned && (
+                <li className="text-purple">• {entraTrim} <span className="text-textdim2">(Entra)</span></li>
+              )}
+              {googleBurned && (
+                <li className="text-purple">• {googleTrim} <span className="text-textdim2">(Google)</span></li>
+              )}
+            </ul>
+            <p className="text-xs text-textdim mb-6 leading-relaxed">
+              Re-buying a burned domain usually carries reputation risk (spam blacklists, low
+              deliverability). Only proceed if you have a specific reason.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmingBurn(false)}
+                className="px-4 py-2 text-xs label-eyebrow border border-border2 text-textdim hover:bg-panel2"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={actuallySubmit}
+                className="px-4 py-2 text-xs label-eyebrow border border-purple/60 text-purple hover:bg-purple/10"
+              >
+                PROCEED ANYWAY
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

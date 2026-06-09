@@ -6,6 +6,7 @@ import OnboardForm from "@/components/hypertide/OnboardForm";
 import DomainOrdersTable from "@/components/hypertide/DomainOrdersTable";
 import PendingActionsList from "@/components/hypertide/PendingActionsList";
 import SimControls from "@/components/hypertide/SimControls";
+import BurnedDomainsTable from "@/components/hypertide/BurnedDomainsTable";
 import {
   BillingConfig,
   Client,
@@ -15,6 +16,7 @@ import {
   PendingAction,
   SimulationConfig,
   fetchBilling,
+  fetchBurnedDomains,
   fetchClients,
   fetchDomainOrders,
   fetchJobLog,
@@ -32,6 +34,7 @@ export default function HypertidePage() {
   const [actions, setActions] = useState<PendingAction[]>([]);
   const [sim, setSim] = useState<SimulationConfig | null>(null);
   const [jobLog, setJobLog] = useState<JobLogRow[]>([]);
+  const [burned, setBurned] = useState<DomainOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -59,9 +62,14 @@ export default function HypertidePage() {
       setSim(s);
       setJobLog(l);
       const orderIds = o.map((x) => x.id);
-      const [m, a] = await Promise.all([fetchMailboxes(orderIds), fetchPendingActions(activeClientId)]);
+      const [m, a, bd] = await Promise.all([
+        fetchMailboxes(orderIds),
+        fetchPendingActions(activeClientId),
+        fetchBurnedDomains(activeClientId),
+      ]);
       setMailboxes(m);
       setActions(a);
+      setBurned(bd);
       setErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -160,7 +168,22 @@ export default function HypertidePage() {
               (e.g. <span className="text-text">try-{activeClient.forwarding_domain.split(".")[0]}.com</span>,{" "}
               <span className="text-text">go-{activeClient.forwarding_domain.split(".")[0]}.net</span>).
             </div>
-            <OnboardForm clientId={activeClient.id} onDone={refresh} />
+            <OnboardForm
+              clientId={activeClient.id}
+              burnedDomains={burned.map((b) => b.domain)}
+              onDone={refresh}
+            />
+          </section>
+
+          {/* Burned domains */}
+          <section className="mb-6 border border-border bg-panel p-4">
+            <div className="label-eyebrow text-purple mb-3">
+              BURNED DOMAINS · {burned.length}
+              <span className="label-eyebrow-dim ml-3 font-normal normal-case">
+                domains previously retired for this client — avoid re-buying
+              </span>
+            </div>
+            <BurnedDomainsTable domains={burned} />
           </section>
 
           {/* Orders */}
