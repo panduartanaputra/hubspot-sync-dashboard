@@ -56,7 +56,7 @@ function HelpIcon({ help }: { help: { title: string; body: string[] } }) {
       {open && (
         <span
           role="tooltip"
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-80 bg-panel2 border border-gold/40 p-3 text-[11px] text-text leading-relaxed shadow-xl"
+          className="absolute top-full right-0 mt-2 z-50 w-80 bg-panel2 border border-gold/40 p-3 text-[11px] text-text leading-relaxed shadow-xl"
         >
           <span className="block label-eyebrow text-gold mb-2">{help.title}</span>
           {help.body.map((line, i) =>
