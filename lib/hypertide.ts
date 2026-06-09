@@ -24,7 +24,8 @@ export type PendingActionType =
   | "confirm_send_as"
   | "connect_unipile"
   | "disconnect_unipile"
-  | "replace_approve";
+  | "replace_approve"
+  | "remove_from_smartlead";
 
 export type PendingActionStatus = "pending" | "in_progress" | "done" | "skipped";
 
@@ -61,6 +62,13 @@ export interface DomainOrder {
   done_at: string | null;
   last_polled_at: string | null;
   failure_reason: string | null;
+  /** When DEACTIVATE / OFFBOARD CLIENT was clicked. After +24h the finalize
+   *  function removes from Smartlead, disconnects Unipile, and flips the
+   *  order to `cancelled`. REVERT clears this column and restores the order. */
+  cancellation_scheduled_at: string | null;
+  smartlead_removed_at: string | null;
+  smartlead_removal_status: "pending" | "success" | "failed" | null;
+  smartlead_removal_failure_reason: string | null;
   created_at: string;
 }
 
@@ -244,8 +252,18 @@ export const fn = {
     invoke("hypertide-resolve-action", args),
   discardOrder: (args: { domain_order_id: string }) => invoke("hypertide-discard-order", args),
   offboardClient: (args: { client_id: string }) =>
-    invoke<{ success: boolean; client: string; summary: { discarded: number; offboarded: number; skipped_actions: number } }>(
+    invoke<{ success: boolean; client: string; summary: { discarded: number; scheduled: number; skipped_actions: number } }>(
       "hypertide-offboard-client",
+      args
+    ),
+  finalizeCancellations: (args?: { force?: boolean; simulate_smartlead?: "success" | "fail" }) =>
+    invoke<{ success: boolean; finalized: number; summary: Array<Record<string, unknown>> }>(
+      "hypertide-finalize-cancellations",
+      args ?? {}
+    ),
+  smartleadRemove: (args: { domain_order_ids: string[]; simulate_result?: "success" | "fail" }) =>
+    invoke<{ success: boolean; results: Array<Record<string, unknown>> }>(
+      "hypertide-smartlead-remove",
       args
     ),
 };

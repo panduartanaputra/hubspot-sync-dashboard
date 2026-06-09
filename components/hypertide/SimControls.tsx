@@ -38,6 +38,24 @@ const TICK_HELP = {
   ],
 };
 
+const FINALIZE_HELP = {
+  title: "FINALIZE CANCELLATIONS",
+  body: [
+    "Closes the 24h wind-down for every order in 'cancelling' status whose Stripe window has expired.",
+    "",
+    "For each finalised order:",
+    "• Mailboxes are removed from Smartlead (per-order tracking)",
+    "• Master inbox is disconnected from Unipile",
+    "• Order status flips cancelling → cancelled",
+    "",
+    "In simulation this button forces finalization on every cancelling order regardless of the 24h timer so you can demo the path immediately.",
+    "",
+    "If Smartlead removal fails, a 'remove_from_smartlead' pending action is opened for retry; the order still transitions to cancelled.",
+    "",
+    "In production this runs hourly via cron (currently disabled).",
+  ],
+};
+
 function HelpIcon({ help }: { help: { title: string; body: string[] } }) {
   const [open, setOpen] = useState(false);
   return (
@@ -117,6 +135,16 @@ export default function SimControls({ sim, onChange }: Props) {
           {busy === "poll" ? "POLLING…" : "POLL ORDERS"}
         </button>
         <HelpIcon help={POLL_HELP} />
+      </div>
+      <div className="flex items-center">
+        <button
+          onClick={() => wrap("finalize", () => fn.finalizeCancellations({ force: true }))}
+          disabled={busy !== null}
+          className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow disabled:opacity-30"
+        >
+          {busy === "finalize" ? "FINALIZING…" : "FINALIZE CANCELLATIONS"}
+        </button>
+        <HelpIcon help={FINALIZE_HELP} />
       </div>
       {msg && <div className="text-textdim text-[10px] ml-2 truncate max-w-md">{msg}</div>}
     </div>

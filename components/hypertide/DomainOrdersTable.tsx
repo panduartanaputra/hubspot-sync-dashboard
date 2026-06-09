@@ -47,7 +47,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
   };
 
   const revert = async (orderId: string, domain: string) => {
-    if (!confirm(`Revert the scheduled cancellation for "${domain}"?\n\nThe order will return to done_pre_unipile and remain active. This only works if the Stripe cancellation has not yet executed.`)) return;
+    if (!confirm(`Revert the scheduled cancellation for "${domain}"?\n\nFull undo: the order returns to its previous live state (done or done_pre_unipile). Because the 24h finalize hasn't fired yet, Unipile is still connected and Smartlead hasn't been touched — nothing needs to be re-done.`)) return;
     setBusy(orderId);
     try {
       await fn.cancelSubscription({ action: "revert", domain_order_ids: [orderId] });
@@ -151,11 +151,20 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
           <tbody>
             {visibleOrders.map((o) => {
               const mbs = mailboxes.filter((m) => m.domain_order_id === o.id);
+              const countdown = formatCountdown(o.cancellation_scheduled_at);
               return (
                 <tr key={o.id} className="border-b border-border hover:bg-panel2/40">
                   <td className="py-2 text-texthi uppercase">{o.plan}</td>
                   <td className="py-2 text-texthi">{o.domain}</td>
-                  <td className={`py-2 ${statusColor(o.status)}`}>● {o.status}</td>
+                  <td className={`py-2 ${statusColor(o.status)}`}>
+                    ● {o.status}
+                    {o.status === "cancelling" && countdown && (
+                      <span className="ml-2 text-[10px] text-textdim2">{countdown}</span>
+                    )}
+                    {o.status === "cancelled" && o.smartlead_removal_status === "failed" && (
+                      <span className="ml-2 text-[10px] text-red label-eyebrow">SMARTLEAD FAILED</span>
+                    )}
+                  </td>
                   <td className="py-2 text-textdim">{o.master_inbox ?? "—"}</td>
                   <td className="py-2 text-textdim">{mbs.length}</td>
                   <td className="py-2 text-right space-x-2">
@@ -196,6 +205,16 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
       )}
     </div>
   );
+}
+
+function formatCountdown(scheduledAt: string | null): string | null {
+  if (!scheduledAt) return null;
+  const finalizeAt = new Date(scheduledAt).getTime() + 24 * 60 * 60 * 1000;
+  const diff = finalizeAt - Date.now();
+  if (diff <= 0) return "READY TO FINALIZE";
+  const hours = Math.floor(diff / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  return `finalizes in ${hours}h ${minutes}m`;
 }
 
 function FilterChip({

@@ -196,6 +196,26 @@ export default function PendingActionsList({
                     DISCONNECT
                   </button>
                 )}
+                {a.action_type === "remove_from_smartlead" && (
+                  <button
+                    onClick={async () => {
+                      if (!a.domain_order_id) return;
+                      setBusy(a.id);
+                      try {
+                        await fn.smartleadRemove({ domain_order_ids: [a.domain_order_id], simulate_result: "success" });
+                        onChange();
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : String(e));
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                    disabled={busy === a.id}
+                    className="px-3 py-1 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow disabled:opacity-30"
+                  >
+                    RETRY SMARTLEAD REMOVE
+                  </button>
+                )}
                 {a.action_type === "replace_approve" && (
                   <button
                     onClick={() => resolve(a)}
@@ -212,6 +232,17 @@ export default function PendingActionsList({
               <div className="mt-2 ml-44 pl-4 border-l-2 border-red/60 text-[11px]">
                 <span className="label-eyebrow text-red mr-2">LAST CONNECT FAILED</span>
                 <span className="text-red">{failedIntegration.last_error}</span>
+              </div>
+            )}
+            {a.action_type === "remove_from_smartlead" && (
+              <div className="mt-2 ml-44 pl-4 border-l-2 border-red/60 text-[11px]">
+                <span className="label-eyebrow text-red mr-2">SMARTLEAD REMOVAL FAILED</span>
+                <span className="text-red">
+                  {(a.payload as { last_error?: string }).last_error ?? "Unknown error"}
+                </span>
+                <span className="text-textdim2 ml-2">
+                  ({(a.payload as { mailbox_count?: number }).mailbox_count ?? 0} mailboxes)
+                </span>
               </div>
             )}
           </li>

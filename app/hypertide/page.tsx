@@ -301,10 +301,12 @@ export default function HypertidePage() {
               You're about to offboard <span className="text-gold font-bold">{activeClient.name}</span>.
             </p>
             <p className="text-xs text-textdim mb-4 leading-relaxed">
-              This will schedule cancellation on <span className="text-cyan">{activeOrderCount}</span> active
-              domain order{activeOrderCount === 1 ? "" : "s"}, open disconnect actions for any Unipile-connected
-              mailboxes, skip any open onboarding pending actions, and mark the client as offboarded. You can
-              still REVERT individual domains during their 24h Stripe wind-down window.
+              This will schedule the 24h wind-down on <span className="text-cyan">{activeOrderCount}</span> active
+              domain order{activeOrderCount === 1 ? "" : "s"}, skip any open onboarding pending actions, and mark
+              the client as offboarded. <span className="text-text">During the 24h window nothing else is touched</span> —
+              Unipile stays connected and Smartlead is untouched, so you can REVERT any domain for a clean
+              full-undo. After 24h the finalize step removes mailboxes from Smartlead, disconnects Unipile, and
+              flips each order to cancelled.
             </p>
             <div className="flex justify-end gap-3">
               <button
