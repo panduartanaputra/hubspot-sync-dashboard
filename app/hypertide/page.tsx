@@ -15,10 +15,12 @@ import {
   Mailbox,
   PendingAction,
   SimulationConfig,
+  IntegrationConnection,
   fetchBilling,
   fetchBurnedDomains,
   fetchClients,
   fetchDomainOrders,
+  fetchIntegrations,
   fetchJobLog,
   fetchMailboxes,
   fetchPendingActions,
@@ -36,6 +38,7 @@ export default function HypertidePage() {
   const [sim, setSim] = useState<SimulationConfig | null>(null);
   const [jobLog, setJobLog] = useState<JobLogRow[]>([]);
   const [burned, setBurned] = useState<DomainOrder[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationConnection[]>([]);
   const [confirmOffboard, setConfirmOffboard] = useState(false);
   const [offboardingBusy, setOffboardingBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -73,6 +76,8 @@ export default function HypertidePage() {
       setMailboxes(m);
       setActions(a);
       setBurned(bd);
+      const integ = await fetchIntegrations(m.map((mb) => mb.id));
+      setIntegrations(integ);
       setErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -250,7 +255,13 @@ export default function HypertidePage() {
           {/* Pending Actions */}
           <section className="mb-6 border border-border bg-panel p-4">
             <div className="label-eyebrow text-gold mb-3">PENDING ACTIONS · {actions.length}</div>
-            <PendingActionsList actions={actions} mailboxes={mailboxes} orders={orders} onChange={refresh} />
+            <PendingActionsList
+              actions={actions}
+              mailboxes={mailboxes}
+              orders={orders}
+              integrations={integrations}
+              onChange={refresh}
+            />
           </section>
 
           {/* Job log */}

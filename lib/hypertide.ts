@@ -168,6 +168,23 @@ export async function fetchMailboxes(orderIds: string[]): Promise<Mailbox[]> {
   return (data ?? []) as Mailbox[];
 }
 
+export interface IntegrationConnection {
+  id: string;
+  mailbox_id: string;
+  provider: "unipile" | "manual" | "smartlead" | "instantly";
+  external_account_id: string | null;
+  status: "not_connected" | "connected" | "failed";
+  connected_at: string | null;
+  last_error: string | null;
+}
+
+export async function fetchIntegrations(mailboxIds: string[]): Promise<IntegrationConnection[]> {
+  if (mailboxIds.length === 0) return [];
+  const { data, error } = await ht().from("integration_connections").select("*").in("mailbox_id", mailboxIds);
+  if (error) throw error;
+  return (data ?? []) as IntegrationConnection[];
+}
+
 export async function fetchPendingActions(clientId: string): Promise<PendingAction[]> {
   const { data, error } = await ht()
     .from("pending_actions")
