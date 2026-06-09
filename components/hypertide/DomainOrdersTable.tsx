@@ -12,7 +12,8 @@ interface Props {
 export default function DomainOrdersTable({ orders, mailboxes, onChange }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
 
-  const cancel = async (orderId: string) => {
+  const offboard = async (orderId: string, domain: string) => {
+    if (!confirm(`Offboard "${domain}"? This schedules a Stripe subscription cancellation, will disconnect Unipile, and the domain will be marked cancelled at the end of the wind-down. You can REVERT until the cancellation executes.`)) return;
     setBusy(orderId);
     try {
       await fn.cancelSubscription({ action: "cancel", domain_order_ids: [orderId] });
@@ -87,11 +88,12 @@ export default function DomainOrdersTable({ orders, mailboxes, onChange }: Props
                 )}
                 {(o.status === "done" || o.status === "done_pre_unipile") && (
                   <button
-                    onClick={() => cancel(o.id)}
+                    onClick={() => offboard(o.id, o.domain)}
                     disabled={busy === o.id}
                     className="px-2 py-1 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow disabled:opacity-30"
+                    title="Schedule a Stripe subscription cancellation and start the offboarding chain. Use REVERT if you change your mind before it executes."
                   >
-                    CANCEL
+                    OFFBOARD
                   </button>
                 )}
                 {o.status === "cancelling" && (
