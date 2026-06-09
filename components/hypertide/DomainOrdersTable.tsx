@@ -5,6 +5,7 @@ import {
   DomainOrder,
   IntegrationConnection,
   Mailbox,
+  computeWarmupRollup,
   fn,
   planLabelUpper,
   statusColor,
@@ -146,6 +147,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
               <th className="text-left py-2 label-eyebrow-dim">STATUS</th>
               <th className="text-left py-2 label-eyebrow-dim">MASTER INBOX</th>
               <th className="text-left py-2 label-eyebrow-dim">MAILBOXES</th>
+              <th className="text-left py-2 label-eyebrow-dim">WARMUP</th>
               <th className="text-right py-2 label-eyebrow-dim">ACTIONS</th>
             </tr>
           </thead>
@@ -153,6 +155,7 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
             {visibleOrders.map((o) => {
               const mbs = mailboxes.filter((m) => m.domain_order_id === o.id);
               const countdown = formatCountdown(o.cancellation_scheduled_at);
+              const warmup = computeWarmupRollup(mbs);
               return (
                 <tr key={o.id} className="border-b border-border hover:bg-panel2/40">
                   <td className="py-2 text-texthi">{planLabelUpper(o.plan)}</td>
@@ -168,6 +171,21 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
                   </td>
                   <td className="py-2 text-textdim">{o.master_inbox ?? "—"}</td>
                   <td className="py-2 text-textdim">{mbs.length}</td>
+                  <td className="py-2 text-[10px] label-eyebrow-dim">
+                    {mbs.length === 0 ? (
+                      <span className="text-textdim2">—</span>
+                    ) : warmup.label === "ready" ? (
+                      <span className="text-green">READY · {warmup.completed}/{warmup.total}</span>
+                    ) : warmup.label === "ready_to_check" ? (
+                      <span className="text-cyan">CHECK NEEDED · {warmup.completed}/{warmup.total}</span>
+                    ) : warmup.label === "warming" ? (
+                      <span className="text-gold" title={warmup.latestFinishAt ? `Latest finishes ${warmup.latestFinishAt.toLocaleString()}` : ""}>
+                        WARMING · {warmup.completed}/{warmup.total}
+                      </span>
+                    ) : (
+                      <span className="text-textdim2">UNKNOWN</span>
+                    )}
+                  </td>
                   <td className="py-2 text-right space-x-2">
                     {o.status === "pending_payment" && (
                       <button

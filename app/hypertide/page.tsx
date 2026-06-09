@@ -218,6 +218,21 @@ export default function HypertidePage() {
                   <span className="text-[10px] text-green">{resetMsg}</span>
                 )}
                 <button
+                  onClick={async () => {
+                    try {
+                      const r = await fn.fastForwardWarmup({ client_id: activeClient.id, days: 15 });
+                      setResetMsg(`Fast-forwarded warmup on ${r.updated} mailboxes by 15 days. Click CHECK WARMUP to roll up.`);
+                      refresh();
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                  className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow"
+                  title="Backdates the warmup_started_at on every mailbox of this client by 15 days so CHECK WARMUP marks them as completed immediately."
+                >
+                  FAST-FORWARD WARMUP (15d)
+                </button>
+                <button
                   onClick={() => setConfirmReset(true)}
                   className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow"
                 >

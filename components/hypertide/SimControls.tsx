@@ -56,6 +56,21 @@ const FINALIZE_HELP = {
   ],
 };
 
+const WARMUP_HELP = {
+  title: "CHECK WARMUP",
+  body: [
+    "Smartlead runs a fixed 14-day warm-up per mailbox, regardless of how many mailboxes a domain has.",
+    "",
+    "This button scans every mailbox under every domain and:",
+    "• Marks any mailbox whose 14-day timer has elapsed as 'warmed up'",
+    "• Rolls the result up to the WARMUP column on each domain row",
+    "",
+    "A domain is fully warmed up only when ALL of its mailboxes have completed (not just the master inbox).",
+    "",
+    "In production this runs hourly via cron (currently disabled).",
+  ],
+};
+
 function HelpIcon({ help }: { help: { title: string; body: string[] } }) {
   const [open, setOpen] = useState(false);
   return (
@@ -145,6 +160,16 @@ export default function SimControls({ sim, onChange }: Props) {
           {busy === "finalize" ? "FINALIZING…" : "FINALIZE CANCELLATIONS"}
         </button>
         <HelpIcon help={FINALIZE_HELP} />
+      </div>
+      <div className="flex items-center">
+        <button
+          onClick={() => wrap("warmup", () => fn.checkWarmup())}
+          disabled={busy !== null}
+          className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow disabled:opacity-30"
+        >
+          {busy === "warmup" ? "CHECKING…" : "CHECK WARMUP"}
+        </button>
+        <HelpIcon help={WARMUP_HELP} />
       </div>
       {msg && <div className="text-textdim text-[10px] ml-2 truncate max-w-md">{msg}</div>}
     </div>

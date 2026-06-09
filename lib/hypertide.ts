@@ -81,12 +81,11 @@ export interface Mailbox {
   last_name: string | null;
   is_master: boolean;
   send_as_granted_at: string | null;
-  /** Renamed from forwarding_configured_at. Hypertide uses BCC-at-mail-server
-   *  forwarding, where each non-master mailbox has the master added as a BCC
-   *  recipient at delivery time. Original mailbox keeps the email + master
-   *  receives a copy. The To: header in master's inbox still shows the
-   *  original alias, so routing automation can identify the intended recipient. */
   bcc_forwarding_configured_at: string | null;
+  /** Smartlead's 14-day warm-up clock starts here, set when the mailbox is
+   *  provisioned. After +14 days the warmup-checker function marks completed_at. */
+  smartlead_warmup_started_at: string | null;
+  smartlead_warmup_completed_at: string | null;
 }
 
 export interface PendingAction {
@@ -272,7 +271,62 @@ export const fn = {
       "hypertide-reset-client",
       args
     ),
+  checkWarmup: () =>
+    invoke<{ success: boolean; mailboxes_just_completed: number; orders: Array<{ domain: string; plan: string; total: number; completed: number; warming: number }> }>(
+      "hypertide-check-warmup",
+      {}
+    ),
+  fastForwardWarmup: (args: { client_id?: string; days?: number }) =>
+    invoke<{ success: boolean; updated: number }>(
+      "hypertide-fastforward-warmup",
+      args
+    ),
 };
+
+/** Per-order warm-up state derived from its mailboxes. */
+export interface WarmupRollup {
+  total: number;
+  completed: number;
+  warming: number;
+  readyToComplete: number;        // mailboxes whose 14d elapsed but not yet checked
+  earliestFinishAt: Date | null;
+  latestFinishAt: Date | null;
+  /** Plain-English state for the table cell. */
+  label: "ready" | "warming" | "ready_to_check" | "unknown";
+}
+export function computeWarmupRollup(mailboxes: Mailbox[]): WarmupRollup {
+  if (mailboxes.length === 0) {
+    return { total: 0, completed: 0, warming: 0, readyToComplete: 0, earliestFinishAt: null, latestFinishAt: null, label: "unknown" };
+  }
+  const now = Date.now();
+  let completed = 0, warming = 0, readyToComplete = 0;
+  let earliest: number | null = null;
+  let latest: number | null = null;
+  for (const m of mailboxes) {
+    if (!m.smartlead_warmup_started_at) {
+      warming++; // treat as still warming if started_at missing
+      continue;
+    }
+    const finish = new Date(m.smartlead_warmup_started_at).getTime() + 14 * 24 * 60 * 60 * 1000;
+    earliest = earliest === null ? finish : Math.min(earliest, finish);
+    latest = latest === null ? finish : Math.max(latest, finish);
+    if (m.smartlead_warmup_completed_at) completed++;
+    else if (finish <= now) readyToComplete++;
+    else warming++;
+  }
+  const label: WarmupRollup["label"] =
+    completed === mailboxes.length ? "ready"
+    : readyToComplete > 0 ? "ready_to_check"
+    : warming > 0 ? "warming"
+    : "unknown";
+  return {
+    total: mailboxes.length,
+    completed, warming, readyToComplete,
+    earliestFinishAt: earliest ? new Date(earliest) : null,
+    latestFinishAt: latest ? new Date(latest) : null,
+    label,
+  };
+}
 
 // ============ STATUS COLOR HELPERS ============
 
