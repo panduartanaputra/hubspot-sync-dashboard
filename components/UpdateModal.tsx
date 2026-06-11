@@ -53,19 +53,26 @@ export default function UpdateModal() {
       aria-labelledby="update-modal-title"
       className="fixed inset-0 z-[100] bg-bg/90 backdrop-blur-sm flex items-center justify-center px-4"
     >
-      <div className="w-full max-w-sm border border-gold/60 bg-panel shadow-[0_0_40px_rgba(224,160,48,0.15)]">
-        <div className="px-5 py-6 text-center">
-          <div className="label-eyebrow mb-3">UPDATE AVAILABLE</div>
+      <div className="w-full max-w-md border border-gold/60 bg-panel shadow-[0_0_40px_rgba(224,160,48,0.15)]">
+        <div className="px-5 py-3 border-b border-border">
+          <div className="label-eyebrow">UPDATE AVAILABLE</div>
+        </div>
+        <div className="px-5 py-5">
           <h2
             id="update-modal-title"
             className="font-serif text-[20px] font-bold text-texthi leading-tight"
           >
-            New version available
+            A new version of the cockpit is live
           </h2>
+          <p className="text-[12px] text-textdim mt-2 leading-relaxed">
+            The dashboard you have open is running an older build. Refresh to load the latest version.
+          </p>
+        </div>
+        <div className="px-5 py-3 border-t border-border flex justify-end">
           <button
             onClick={() => window.location.reload()}
             autoFocus
-            className="mt-5 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-2 border border-gold text-gold hover:bg-gold/10"
+            className="text-[11px] font-bold tracking-[0.15em] uppercase px-4 py-2 border border-gold text-gold hover:bg-gold/10"
           >
             Refresh Now
           </button>
