@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import KPIRow from "@/components/KPIRow";
 import KanbanBoard from "@/components/KanbanBoard";
 import SyncLogFeed from "@/components/SyncLogFeed";
+import ConnectionStatus from "@/components/ConnectionStatus";
 import { fetchLeads, fetchSyncLog } from "@/lib/queries";
 import { LeadCard, SyncLogRow } from "@/lib/types";
 
@@ -43,10 +44,7 @@ export default function HomePage() {
             Move leads through the funnel. Confirmed meetings auto-push to HubSpot.
           </p>
         </div>
-        <div className="text-right">
-          <div className="label-eyebrow-dim">ENV</div>
-          <div className="text-xs text-text mt-1">supabase-lab · na2</div>
-        </div>
+        <ConnectionStatus />
       </header>
 
       {err && (
