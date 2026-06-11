@@ -50,6 +50,8 @@ export interface Opportunity {
   hubspot_deal_id: string | null;
   pushed_to_hubspot_at: string | null;
   last_synced_at: string | null;
+  closed_lost_reason: string | null;
+  last_change_source: "dashboard" | "hubspot_inbound" | "seed" | "backfill" | null;
   created_at: string;
 }
 
@@ -71,7 +73,7 @@ export interface SyncLogRow {
   id: string;
   opportunity_id: string | null;
   meeting_id: string | null;
-  destination: string;
+  destination: "hubspot" | "hubspot_inbound" | "slack" | "email" | "other" | string;
   action: string;
   status: "success" | "failure" | "retrying";
   error_message: string | null;

@@ -18,6 +18,7 @@ export default function SyncLogFeed({ rows }: { rows: SyncLogRow[] }) {
             <thead className="label-eyebrow-dim">
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-2.5 font-bold">TIME</th>
+                <th className="text-left px-4 py-2.5 font-bold">DIRECTION</th>
                 <th className="text-left px-4 py-2.5 font-bold">ACTION</th>
                 <th className="text-left px-4 py-2.5 font-bold">STATUS</th>
                 <th className="text-left px-4 py-2.5 font-bold">HUBSPOT IDS</th>
@@ -25,9 +26,18 @@ export default function SyncLogFeed({ rows }: { rows: SyncLogRow[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id} className="border-b border-border/60 last:border-0 hover:bg-panel2">
+              {rows.map(r => {
+                const inbound = r.destination === "hubspot_inbound";
+                return (
+                <tr key={r.id} className={`border-b border-border/60 last:border-0 hover:bg-panel2 ${inbound ? "bg-cyan/[0.03]" : ""}`}>
                   <td className="px-4 py-2 text-textdim font-mono">{fmtTime(r.attempted_at)}</td>
+                  <td className="px-4 py-2">
+                    <span className={`text-[10px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border ${
+                      inbound ? "border-cyan/50 text-cyan" : "border-gold/50 text-gold"
+                    }`}>
+                      {inbound ? "← IN" : "→ OUT"}
+                    </span>
+                  </td>
                   <td className="px-4 py-2 text-text uppercase tracking-wider text-[11px]">{r.action.replace(/_/g, " ")}</td>
                   <td className="px-4 py-2">
                     <span className={`text-[10px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border ${
@@ -51,7 +61,7 @@ export default function SyncLogFeed({ rows }: { rows: SyncLogRow[] }) {
                   </td>
                   <td className="px-4 py-2 text-textdim font-mono">{r.duration_ms ? `${r.duration_ms}ms` : "—"}</td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         )}

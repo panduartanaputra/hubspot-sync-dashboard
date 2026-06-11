@@ -90,6 +90,33 @@ export async function updateMeetingStatus(meetingId: string, status: "held" | "n
   if (error) throw error;
 }
 
+export interface HubSpotConnection {
+  id: string;
+  hubspot_portal_id: number;
+  hubspot_user_email: string | null;
+  hub_domain: string | null;
+  scopes: string[];
+  connected_at: string;
+  is_active: boolean;
+}
+
+export async function fetchActiveConnection(): Promise<HubSpotConnection | null> {
+  const { data, error } = await supabase
+    .from("hubspot_connections")
+    .select("id,hubspot_portal_id,hubspot_user_email,hub_domain,scopes,connected_at,is_active")
+    .eq("is_active", true)
+    .order("connected_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as HubSpotConnection | null;
+}
+
+export async function disconnectHubSpot() {
+  const res = await fetch("/api/hubspot/disconnect", { method: "POST" });
+  if (!res.ok) throw new Error(`Disconnect failed: ${await res.text()}`);
+}
+
 /** Mark an opportunity as disqualified (no meeting involved). */
 export async function disqualifyOpportunity(opportunityId: string, reason?: string) {
   const updates: Record<string, unknown> = { status: "disqualified" };

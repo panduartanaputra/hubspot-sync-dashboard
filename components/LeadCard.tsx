@@ -119,7 +119,19 @@ export default function LeadCardView({ lead, onRequestBookMeeting, onChange }: P
         )}
 
         {column === "closed" && (
-          <span className="text-[10px] text-textdim2 tracking-wider uppercase">{opportunity.status.replace("_", " ")}</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-textdim2 tracking-wider uppercase">{opportunity.status.replace("_", " ")}</span>
+            {opportunity.closed_lost_reason && (
+              <span className="text-[10px] text-red tracking-wider uppercase">
+                ◉ {opportunity.closed_lost_reason}
+              </span>
+            )}
+            {opportunity.last_change_source === "hubspot_inbound" && (
+              <span className="text-[9px] text-cyan tracking-[0.15em] uppercase mt-0.5">
+                ← Via HubSpot
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
