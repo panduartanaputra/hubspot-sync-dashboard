@@ -54,7 +54,7 @@ export default function UpdateModal() {
       className="fixed inset-0 z-[100] bg-bg/90 backdrop-blur-sm flex items-center justify-center px-4"
     >
       <div className="w-full max-w-sm border border-gold/60 bg-panel shadow-[0_0_40px_rgba(224,160,48,0.15)]">
-        <div className="px-5 py-5 text-center">
+        <div className="px-5 py-6 text-center">
           <div className="label-eyebrow mb-3">UPDATE AVAILABLE</div>
           <h2
             id="update-modal-title"
@@ -62,9 +62,6 @@ export default function UpdateModal() {
           >
             New version available
           </h2>
-          <div className="text-[10px] text-textdim2 tracking-[0.15em] uppercase mt-2 font-mono">
-            {myBuildId} → <span className="text-gold">{newBuildId}</span>
-          </div>
           <button
             onClick={() => window.location.reload()}
             autoFocus
@@ -73,6 +70,8 @@ export default function UpdateModal() {
             Refresh Now
           </button>
         </div>
+        {/* Build IDs intentionally hidden — kept in HTML attributes for debugging */}
+        <div className="hidden" data-current-build={myBuildId} data-new-build={newBuildId ?? ""} />
       </div>
     </div>
   );
