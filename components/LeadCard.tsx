@@ -49,7 +49,32 @@ export default function LeadCardView({ lead, onRequestBookMeeting, onChange }: P
     finally { setBusy(false); }
   }
 
-  const pushed = !!opportunity.hubspot_deal_id;
+  // Sync state — explicit for both states so the user always knows.
+  //   • Has contact + deal     → fully synced ("HUBSPOT ✓")
+  //   • Has contact, no deal   → partial sync, intentional ("HUBSPOT · CONTACT")
+  //                              (interested + disqualified leads get Contact only by design)
+  //   • Has neither            → not yet pushed ("NOT SYNCED")
+  const hasContact = !!opportunity.hubspot_contact_id;
+  const hasDeal = !!opportunity.hubspot_deal_id;
+  const dealExpected = !["interested", "disqualified"].includes(opportunity.status);
+
+  let syncBadge: { label: string; tone: "cyan" | "amber" | "dim" } = {
+    label: "NOT SYNCED",
+    tone: "dim",
+  };
+  if (hasContact && hasDeal) {
+    syncBadge = { label: "HUBSPOT ✓", tone: "cyan" };
+  } else if (hasContact && !dealExpected) {
+    // Contact-only is the correct end-state for interested / disqualified leads
+    syncBadge = { label: "HUBSPOT ✓", tone: "cyan" };
+  } else if (hasContact && dealExpected && !hasDeal) {
+    // We pushed the contact but a deal was expected and didn't land yet
+    syncBadge = { label: "PARTIAL", tone: "amber" };
+  }
+  const badgeClass =
+    syncBadge.tone === "cyan"  ? "border-cyan/40 text-cyan"
+    : syncBadge.tone === "amber" ? "border-gold/40 text-gold"
+    :                              "border-border2 text-textdim2";
 
   return (
     <div className="border border-border bg-panel2 px-3 py-2.5 hover:border-border2 transition-colors">
@@ -63,11 +88,18 @@ export default function LeadCardView({ lead, onRequestBookMeeting, onChange }: P
             {primaryPerson?.title ?? "—"}
           </div>
         </div>
-        {pushed && (
-          <span className="text-[9px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border border-cyan/40 text-cyan whitespace-nowrap">
-            HUBSPOT
-          </span>
-        )}
+        <span
+          className={`text-[9px] font-bold tracking-[0.15em] uppercase px-1.5 py-0.5 border ${badgeClass} whitespace-nowrap`}
+          title={
+            syncBadge.tone === "cyan"
+              ? "Pushed to your connected HubSpot"
+              : syncBadge.tone === "amber"
+              ? "Contact synced; deal push pending or failed — check Sync Activity"
+              : "Not yet pushed to HubSpot"
+          }
+        >
+          {syncBadge.label}
+        </span>
       </div>
 
       {latestMeeting && (
