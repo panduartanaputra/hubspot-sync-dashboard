@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchActiveConnection, disconnectHubSpot, HubSpotConnection } from "@/lib/queries";
 
 export default function ConnectionStatus() {
@@ -8,6 +8,14 @@ export default function ConnectionStatus() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [flashTone, setFlashTone] = useState<"info" | "error">("info");
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  function showFlash(msg: string, tone: "info" | "error" = "info", ms = 5000) {
+    setFlash(msg);
+    setFlashTone(tone);
+    setTimeout(() => setFlash(null), ms);
+  }
 
   async function refresh() {
     try {
@@ -21,25 +29,70 @@ export default function ConnectionStatus() {
 
   useEffect(() => {
     refresh();
-    // Show flash message if redirected back from callback
+
+    // Show flash if the user landed here via callback fallback (non-popup path)
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
       if (sp.get("oauth") === "connected") {
-        setFlash(`Connected to portal ${sp.get("portal")}`);
-        // Clean the URL
+        showFlash(`Connected to portal ${sp.get("portal")}`, "info");
         window.history.replaceState({}, "", window.location.pathname);
-        setTimeout(() => setFlash(null), 5000);
       }
       const err = sp.get("oauth_error");
       if (err) {
-        setFlash(`OAuth error: ${err}`);
+        showFlash(`OAuth error: ${err}`, "error", 8000);
         window.history.replaceState({}, "", window.location.pathname);
-        setTimeout(() => setFlash(null), 8000);
       }
     }
+
+    // Listen for postMessage from the OAuth popup
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.type !== "hubspot-oauth") return;
+      if (data.oauth === "connected") {
+        showFlash(`Connected to portal ${data.portal}`, "info");
+        refresh();
+      } else if (data.oauth_error) {
+        showFlash(`OAuth error: ${data.oauth_error}`, "error", 8000);
+      }
+    }
+    window.addEventListener("message", onMessage);
+
     const i = setInterval(refresh, 10000);
-    return () => clearInterval(i);
+    return () => {
+      clearInterval(i);
+      window.removeEventListener("message", onMessage);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
+
+  function handleConnect() {
+    const w = 600;
+    const h = 720;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top  = window.screenY + (window.outerHeight - h) / 2;
+    const features = `popup=yes,width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)}`;
+
+    const popup = window.open("/api/hubspot/connect", "hubspot-oauth", features);
+
+    if (!popup || popup.closed || typeof popup.closed === "undefined") {
+      showFlash(
+        "Popup blocked. Please allow popups for this site and try again.",
+        "error",
+        8000,
+      );
+      return;
+    }
+
+    // Defensive backup: poll for popup close, in case postMessage was missed.
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => {
+      if (popup.closed) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        refresh();
+      }
+    }, 800);
+  }
 
   async function handleDisconnect() {
     if (!confirm("Disconnect HubSpot? Existing data in HubSpot will be left alone.")) return;
@@ -47,8 +100,7 @@ export default function ConnectionStatus() {
     try {
       await disconnectHubSpot();
       await refresh();
-      setFlash("Disconnected from HubSpot");
-      setTimeout(() => setFlash(null), 4000);
+      showFlash("Disconnected from HubSpot", "info", 4000);
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
     } finally {
@@ -86,16 +138,22 @@ export default function ConnectionStatus() {
       ) : (
         <>
           <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-textdim">HubSpot CRM</div>
-          <a
-            href="/api/hubspot/connect"
+          <button
+            onClick={handleConnect}
             className="text-[11px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border border-gold text-gold hover:bg-gold/10 mt-1"
           >
             Connect HubSpot →
-          </a>
+          </button>
         </>
       )}
       {flash && (
-        <div className="text-[10px] text-cyan tracking-wider mt-1">{flash}</div>
+        <div
+          className={`text-[10px] tracking-wider mt-1 max-w-xs text-right ${
+            flashTone === "error" ? "text-red" : "text-cyan"
+          }`}
+        >
+          {flash}
+        </div>
       )}
     </div>
   );

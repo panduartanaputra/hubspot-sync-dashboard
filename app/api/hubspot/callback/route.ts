@@ -1,6 +1,8 @@
 // GET /api/hubspot/callback?code=...&state=...
 // Exchanges the authorization code for access + refresh tokens, stores the connection in Supabase,
-// then redirects the user back to the dashboard.
+// then either:
+//   - if in a popup: returns HTML that postMessages success/error to window.opener and closes itself
+//   - if loaded directly: redirects back to the dashboard with query params
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
@@ -9,17 +11,71 @@ const CLIENT_ID = process.env.HUBSPOT_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.HUBSPOT_OAUTH_CLIENT_SECRET;
 const REDIRECT_URI = process.env.HUBSPOT_OAUTH_REDIRECT_URI;
 const APP_ID = process.env.HUBSPOT_OAUTH_APP_ID;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-function errorPage(message: string) {
-  // Send the user back to the dashboard with an error query param.
-  const target = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+function htmlResult(args: { ok: boolean; payload: Record<string, unknown>; redirectTarget: string }) {
+  // Returns an HTML page that:
+  //   - if window.opener exists (popup case): postMessage to opener, then close()
+  //   - else (direct navigation): redirect to dashboard with query params
+  const safePayload = JSON.stringify({ type: "hubspot-oauth", ...args.payload });
+  const safeOrigin  = JSON.stringify(new URL(APP_URL).origin);
+  const safeRedirect = JSON.stringify(args.redirectTarget);
+  const title = args.ok ? "Connected" : "Connection failed";
+  const colorAccent = args.ok ? "#50B868" : "#D05858";
+  const message = args.ok ? "✓ Connected to HubSpot" : "✗ Connection failed";
+  const sub = args.ok ? "You can close this window." : "Check the dashboard for details.";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body { margin:0; background:#080808; color:#E2E2E2; font-family:ui-monospace,Menlo,monospace;
+           display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; }
+    .accent { color:${colorAccent}; font-size:14px; font-weight:700; letter-spacing:0.1em; }
+    .sub { color:#737373; font-size:12px; margin-top:8px; letter-spacing:0.05em; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="accent">${message}</div>
+    <div class="sub">${sub}</div>
+  </div>
+  <script>
+    (function() {
+      var payload = ${safePayload};
+      var origin  = ${safeOrigin};
+      var redirectTarget = ${safeRedirect};
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(payload, origin);
+          setTimeout(function() { window.close(); }, 400);
+          return;
+        }
+      } catch (e) { /* ignore cross-origin issues */ }
+      // No opener -> direct navigation, fall back to redirect
+      window.location.replace(redirectTarget);
+    })();
+  </script>
+</body>
+</html>`;
+  return new NextResponse(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+function errorResult(message: string) {
+  const target = new URL(APP_URL);
   target.searchParams.set("oauth_error", message);
-  return NextResponse.redirect(target);
+  return htmlResult({
+    ok: false,
+    payload: { oauth_error: message },
+    redirectTarget: target.toString(),
+  });
 }
 
 export async function GET(req: Request) {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
-    return errorPage("Missing OAuth env vars on server");
+    return errorResult("Missing OAuth env vars on server");
   }
 
   const url = new URL(req.url);
@@ -27,22 +83,21 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const hubspotError = url.searchParams.get("error");
 
-  if (hubspotError) return errorPage(`HubSpot returned error: ${hubspotError}`);
-  if (!code || !state) return errorPage("Missing code or state from HubSpot redirect");
+  if (hubspotError) return errorResult(`HubSpot returned error: ${hubspotError}`);
+  if (!code || !state) return errorResult("Missing code or state from HubSpot redirect");
 
   const sb = supabaseServer();
 
-  // Verify + consume the state row
+  // Verify + consume the state row (CSRF protection)
   const { data: stateRow, error: stateErr } = await sb
     .from("hubspot_oauth_states")
     .select("*")
     .eq("state", state)
     .maybeSingle();
-  if (stateErr) return errorPage(`State lookup failed: ${stateErr.message}`);
-  if (!stateRow) return errorPage("Invalid or expired OAuth state (possible CSRF)");
-  if (stateRow.consumed_at) return errorPage("OAuth state already used");
+  if (stateErr) return errorResult(`State lookup failed: ${stateErr.message}`);
+  if (!stateRow) return errorResult("Invalid or expired OAuth state (possible CSRF)");
+  if (stateRow.consumed_at) return errorResult("OAuth state already used");
 
-  // Mark the state consumed (best effort — race-safe enough for lab)
   await sb
     .from("hubspot_oauth_states")
     .update({ consumed_at: new Date().toISOString() })
@@ -63,49 +118,41 @@ export async function GET(req: Request) {
 
   if (!tokenRes.ok) {
     const text = await tokenRes.text();
-    return errorPage(`Token exchange failed: ${tokenRes.status} ${text}`);
+    return errorResult(`Token exchange failed: ${tokenRes.status} ${text}`);
   }
   const tokens = await tokenRes.json() as {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;        // seconds
-    token_type: string;
+    access_token: string; refresh_token: string; expires_in: number; token_type: string;
   };
 
-  // Look up portal info from HubSpot
+  // Look up portal info
   const accountRes = await fetch("https://api.hubapi.com/account-info/v3/details", {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
   if (!accountRes.ok) {
     const text = await accountRes.text();
-    return errorPage(`Failed to fetch HubSpot account info: ${accountRes.status} ${text}`);
+    return errorResult(`Failed to fetch HubSpot account info: ${accountRes.status} ${text}`);
   }
   const account = await accountRes.json() as {
-    portalId: number;
-    accountType: string;
-    timeZone: string;
-    uiDomain: string;
+    portalId: number; accountType: string; timeZone: string; uiDomain: string;
   };
 
-  // Look up scopes + user info via token introspection endpoint
-  const introspectRes = await fetch(
-    `https://api.hubapi.com/oauth/v1/access-tokens/${encodeURIComponent(tokens.access_token)}`,
-  );
+  // Token introspection (best-effort: gives scopes + user)
   let scopes: string[] = [];
   let userEmail: string | null = null;
   let userId: number | null = null;
+  const introspectRes = await fetch(
+    `https://api.hubapi.com/oauth/v1/access-tokens/${encodeURIComponent(tokens.access_token)}`,
+  );
   if (introspectRes.ok) {
     const introspect = await introspectRes.json() as {
-      user?: string;
-      user_id?: number;
-      scopes?: string[];
+      user?: string; user_id?: number; scopes?: string[];
     };
     scopes = introspect.scopes ?? [];
     userEmail = introspect.user ?? null;
     userId = introspect.user_id ?? null;
   }
 
-  // Deactivate any existing active connection for this portal (one-active-at-a-time)
+  // Deactivate prior active connections for this portal
   await sb
     .from("hubspot_connections")
     .update({ is_active: false, disconnected_at: new Date().toISOString() })
@@ -114,7 +161,7 @@ export async function GET(req: Request) {
 
   const expiresAt = new Date(Date.now() + (tokens.expires_in - 60) * 1000).toISOString();
 
-  // Pick the first client_id in the table as the "owner" of this connection (lab simplification).
+  // Attach to the first client in the lab (single-tenant simplification)
   const { data: anyClient } = await sb.from("clients").select("id").limit(1).maybeSingle();
 
   const { error: insertErr } = await sb.from("hubspot_connections").insert({
@@ -130,11 +177,16 @@ export async function GET(req: Request) {
     hub_domain: account.uiDomain,
     is_active: true,
   });
-  if (insertErr) return errorPage(`Failed to save connection: ${insertErr.message}`);
+  if (insertErr) return errorResult(`Failed to save connection: ${insertErr.message}`);
 
-  // Success — bounce back to dashboard
-  const target = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+  // Success — for popups, close + postMessage; for direct nav, redirect back
+  const target = new URL(APP_URL);
   target.searchParams.set("oauth", "connected");
   target.searchParams.set("portal", account.portalId.toString());
-  return NextResponse.redirect(target);
+
+  return htmlResult({
+    ok: true,
+    payload: { oauth: "connected", portal: account.portalId },
+    redirectTarget: target.toString(),
+  });
 }
