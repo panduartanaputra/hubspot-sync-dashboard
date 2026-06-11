@@ -252,6 +252,27 @@ export async function GET(req: Request) {
     .eq("hubspot_portal_id", account.portalId)
     .eq("is_active", true);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Fire-and-forget bulk backfill of every existing opportunity in Supabase.
+  // The user sees their full pipeline in HubSpot within ~10-30s of clicking
+  // Connect, instead of waiting for per-action pushes. Additive-only:
+  // find-or-create Contacts, never overwrites existing user data.
+  // ─────────────────────────────────────────────────────────────────────────
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  // Don't await — let the callback redirect immediately while the backfill runs in the background.
+  fetch(`${supabaseUrl}/functions/v1/backfill-hubspot`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Authenticate to the edge function via service role (no JWT verify on the function itself).
+      "Authorization": `Bearer ${serviceRoleKey}`,
+    },
+    body: "{}",
+  }).catch((e) => {
+    console.error("Failed to trigger backfill-hubspot:", e);
+  });
+
   // Success — for popups, close + postMessage; for direct nav, redirect back
   const target = new URL(APP_URL);
   target.searchParams.set("oauth", "connected");
