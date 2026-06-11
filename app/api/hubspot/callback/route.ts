@@ -179,6 +179,79 @@ export async function GET(req: Request) {
   });
   if (insertErr) return errorResult(`Failed to save connection: ${insertErr.message}`);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auto-provision our namespaced custom contact properties on the connected
+  // portal. Idempotent: if a property already exists, HubSpot returns 409 and
+  // we treat it as success. Never modifies pre-existing user properties.
+  //
+  // Property names use the `salesos_` prefix to guarantee zero collision with
+  // any user-defined property on their CRM.
+  // ─────────────────────────────────────────────────────────────────────────
+  const propertyDefinitions = [
+    {
+      name: "salesos_source_lead_id",
+      label: "SalesOS · Source Lead ID",
+      type: "string",
+      fieldType: "text",
+      groupName: "contactinformation",
+      description: "ID of the SalesOS opportunity this contact was synced from. Auto-managed by SalesOS Sync.",
+    },
+    {
+      name: "salesos_meeting_at",
+      label: "SalesOS · Meeting At",
+      type: "datetime",
+      fieldType: "date",
+      groupName: "contactinformation",
+      description: "Scheduled time of the meeting booked via SalesOS. Auto-managed by SalesOS Sync.",
+    },
+  ];
+
+  const provisioningLog: Array<{ property: string; status: string; message?: string }> = [];
+
+  for (const def of propertyDefinitions) {
+    try {
+      const propRes = await fetch(
+        "https://api.hubapi.com/crm/v3/properties/contacts",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(def),
+        },
+      );
+      if (propRes.ok) {
+        provisioningLog.push({ property: def.name, status: "created" });
+      } else if (propRes.status === 409) {
+        // Property already exists — idempotent path, do NOT modify the user's existing definition.
+        provisioningLog.push({ property: def.name, status: "already_existed" });
+      } else {
+        const text = await propRes.text();
+        provisioningLog.push({
+          property: def.name,
+          status: "error",
+          message: `${propRes.status}: ${text.slice(0, 200)}`,
+        });
+      }
+    } catch (e) {
+      provisioningLog.push({
+        property: def.name,
+        status: "exception",
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  await sb
+    .from("hubspot_connections")
+    .update({
+      properties_provisioned_at: new Date().toISOString(),
+      provisioning_log: provisioningLog,
+    })
+    .eq("hubspot_portal_id", account.portalId)
+    .eq("is_active", true);
+
   // Success — for popups, close + postMessage; for direct nav, redirect back
   const target = new URL(APP_URL);
   target.searchParams.set("oauth", "connected");
