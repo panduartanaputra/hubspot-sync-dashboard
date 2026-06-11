@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+import UpdateModal from "@/components/UpdateModal";
 
 export const metadata: Metadata = {
   title: "Metis · Cockpit",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AppShell>{children}</AppShell>
+        <UpdateModal />
       </body>
     </html>
   );
