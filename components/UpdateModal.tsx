@@ -53,33 +53,22 @@ export default function UpdateModal() {
       aria-labelledby="update-modal-title"
       className="fixed inset-0 z-[100] bg-bg/90 backdrop-blur-sm flex items-center justify-center px-4"
     >
-      <div className="w-full max-w-md border border-gold/60 bg-panel shadow-[0_0_40px_rgba(224,160,48,0.15)]">
-        <div className="px-5 py-3 border-b border-border">
-          <div className="label-eyebrow">UPDATE AVAILABLE</div>
-        </div>
-        <div className="px-5 py-5">
+      <div className="w-full max-w-sm border border-gold/60 bg-panel shadow-[0_0_40px_rgba(224,160,48,0.15)]">
+        <div className="px-5 py-5 text-center">
+          <div className="label-eyebrow mb-3">UPDATE AVAILABLE</div>
           <h2
             id="update-modal-title"
             className="font-serif text-[20px] font-bold text-texthi leading-tight"
           >
-            A new version of the cockpit is live
+            New version available
           </h2>
-          <p className="text-[12px] text-textdim mt-2 leading-relaxed">
-            The dashboard you have open is running an older build. Refresh now to load the latest version. Unsaved changes (if any) will be lost.
-          </p>
-          <div className="text-[10px] text-textdim2 tracking-wider uppercase mt-4 font-mono flex gap-2 items-center flex-wrap">
-            <span className="text-textdim2">CURRENT:</span>
-            <span className="text-textdim">{myBuildId}</span>
-            <span className="text-textdim2">→</span>
-            <span className="text-textdim2">NEW:</span>
-            <span className="text-gold">{newBuildId}</span>
+          <div className="text-[10px] text-textdim2 tracking-[0.15em] uppercase mt-2 font-mono">
+            {myBuildId} → <span className="text-gold">{newBuildId}</span>
           </div>
-        </div>
-        <div className="px-5 py-3 border-t border-border flex justify-end">
           <button
             onClick={() => window.location.reload()}
             autoFocus
-            className="text-[11px] font-bold tracking-[0.15em] uppercase px-4 py-2 border border-gold text-gold hover:bg-gold/10"
+            className="mt-5 text-[11px] font-bold tracking-[0.15em] uppercase px-5 py-2 border border-gold text-gold hover:bg-gold/10"
           >
             Refresh Now
           </button>
