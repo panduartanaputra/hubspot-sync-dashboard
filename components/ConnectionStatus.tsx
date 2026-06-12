@@ -73,7 +73,10 @@ export default function ConnectionStatus() {
     const top  = window.screenY + (window.outerHeight - h) / 2;
     const features = `popup=yes,width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)}`;
 
-    const popup = window.open("/api/hubspot/connect", "hubspot-oauth", features);
+    // Unique window name on every click so the browser NEVER reuses a stale popup
+    // from a previous attempt (which would re-fire its old postMessage on focus).
+    const windowName = `hubspot-oauth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const popup = window.open("/api/hubspot/connect", windowName, features);
 
     if (!popup || popup.closed || typeof popup.closed === "undefined") {
       showFlash(
