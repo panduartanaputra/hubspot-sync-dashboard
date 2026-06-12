@@ -152,32 +152,57 @@ export async function GET(req: Request) {
     userId = introspect.user_id ?? null;
   }
 
-  // Deactivate prior active connections for this portal
-  await sb
-    .from("hubspot_connections")
-    .update({ is_active: false, disconnected_at: new Date().toISOString() })
-    .eq("hubspot_portal_id", account.portalId)
-    .eq("is_active", true);
-
   const expiresAt = new Date(Date.now() + (tokens.expires_in - 60) * 1000).toISOString();
-
-  // Attach to the first client in the lab (single-tenant simplification)
   const { data: anyClient } = await sb.from("clients").select("id").limit(1).maybeSingle();
 
-  const { error: insertErr } = await sb.from("hubspot_connections").insert({
-    client_id: anyClient?.id ?? null,
-    hubspot_portal_id: account.portalId,
-    hubspot_app_id: APP_ID ? Number(APP_ID) : null,
-    hubspot_user_id: userId,
-    hubspot_user_email: userEmail,
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: expiresAt,
-    scopes,
-    hub_domain: account.uiDomain,
-    is_active: true,
-  });
-  if (insertErr) return errorResult(`Failed to save connection: ${insertErr.message}`);
+  // ─────────────────────────────────────────────────────────────────────────
+  // UPSERT pattern: if a connection already exists for this portal, refresh
+  // its tokens in place. Otherwise insert a new row. This eliminates the
+  // deactivate-then-insert race condition where two concurrent callbacks
+  // (popup retries, browser prefetches) could leave the system with no
+  // active connection.
+  // ─────────────────────────────────────────────────────────────────────────
+  const { data: existing } = await sb
+    .from("hubspot_connections")
+    .select("id")
+    .eq("hubspot_portal_id", account.portalId)
+    .order("connected_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    // Refresh tokens + reactivate the existing connection row.
+    const { error: updateErr } = await sb.from("hubspot_connections").update({
+      client_id: anyClient?.id ?? null,
+      hubspot_app_id: APP_ID ? Number(APP_ID) : null,
+      hubspot_user_id: userId,
+      hubspot_user_email: userEmail,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_at: expiresAt,
+      scopes,
+      hub_domain: account.uiDomain,
+      is_active: true,
+      disconnected_at: null,
+      last_refresh_at: new Date().toISOString(),
+    }).eq("id", existing.id);
+    if (updateErr) return errorResult(`Failed to refresh connection: ${updateErr.message}`);
+  } else {
+    const { error: insertErr } = await sb.from("hubspot_connections").insert({
+      client_id: anyClient?.id ?? null,
+      hubspot_portal_id: account.portalId,
+      hubspot_app_id: APP_ID ? Number(APP_ID) : null,
+      hubspot_user_id: userId,
+      hubspot_user_email: userEmail,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_at: expiresAt,
+      scopes,
+      hub_domain: account.uiDomain,
+      is_active: true,
+    });
+    if (insertErr) return errorResult(`Failed to save connection: ${insertErr.message}`);
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Auto-provision our namespaced custom contact properties on the connected
