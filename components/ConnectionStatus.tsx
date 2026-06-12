@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fetchActiveConnection, disconnectHubSpot, HubSpotConnection } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
 
 export default function ConnectionStatus() {
   const [conn, setConn] = useState<HubSpotConnection | null>(null);
@@ -58,11 +59,26 @@ export default function ConnectionStatus() {
     }
     window.addEventListener("message", onMessage);
 
+    // Realtime: subscribe to row changes on hubspot_connections so the UI flips
+    // to ● CONNECTED the moment the OAuth callback writes the row, instead of
+    // waiting for the 10s poll. Closes the window where users might re-click
+    // Connect during the lag.
+    const channel = supabase
+      .channel("hubspot_connections_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "hubspot_connections" },
+        () => { refresh(); },
+      )
+      .subscribe();
+
+    // Keep the 10s poll as a backstop (in case Realtime channel drops).
     const i = setInterval(refresh, 10000);
     return () => {
       clearInterval(i);
       window.removeEventListener("message", onMessage);
       if (pollRef.current) clearInterval(pollRef.current);
+      supabase.removeChannel(channel);
     };
   }, []);
 

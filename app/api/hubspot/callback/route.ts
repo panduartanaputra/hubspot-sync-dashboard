@@ -88,20 +88,47 @@ export async function GET(req: Request) {
 
   const sb = supabaseServer();
 
-  // Verify + consume the state row (CSRF protection)
-  const { data: stateRow, error: stateErr } = await sb
-    .from("hubspot_oauth_states")
-    .select("*")
-    .eq("state", state)
-    .maybeSingle();
-  if (stateErr) return errorResult(`State lookup failed: ${stateErr.message}`);
-  if (!stateRow) return errorResult("Invalid or expired OAuth state (possible CSRF)");
-  if (stateRow.consumed_at) return errorResult("OAuth state already used");
-
-  await sb
+  // Atomic state claim: UPDATE ... WHERE consumed_at IS NULL RETURNING *.
+  // Race-safe at the DB level — concurrent callbacks (HubSpot's "previously
+  // authorized, redirecting…" can fire the URL twice) can both attempt this,
+  // but only one will get a row back. Replaces the SELECT-then-UPDATE check
+  // which had a TOCTOU window between the two statements.
+  const { data: claimed, error: claimErr } = await sb
     .from("hubspot_oauth_states")
     .update({ consumed_at: new Date().toISOString() })
-    .eq("state", state);
+    .eq("state", state)
+    .is("consumed_at", null)
+    .select();
+  if (claimErr) return errorResult(`State claim failed: ${claimErr.message}`);
+
+  if (!claimed || claimed.length === 0) {
+    // The state was either never minted (CSRF/replay) OR was already claimed by
+    // a concurrent callback. For the latter, the prior execution likely already
+    // saved a working connection — make this idempotent so the user doesn't see
+    // a misleading error after a successful flow.
+    const { data: anyStateRow } = await sb
+      .from("hubspot_oauth_states").select("state").eq("state", state).maybeSingle();
+    if (!anyStateRow) return errorResult("Invalid or expired OAuth state (possible CSRF)");
+
+    const { data: recentConn } = await sb
+      .from("hubspot_connections")
+      .select("hubspot_portal_id")
+      .gte("connected_at", new Date(Date.now() - 60_000).toISOString())
+      .eq("is_active", true)
+      .order("connected_at", { ascending: false })
+      .limit(1).maybeSingle();
+    if (recentConn) {
+      const t = new URL(APP_URL);
+      t.searchParams.set("oauth", "connected");
+      t.searchParams.set("portal", String(recentConn.hubspot_portal_id));
+      return htmlResult({
+        ok: true,
+        payload: { oauth: "connected", portal: recentConn.hubspot_portal_id },
+        redirectTarget: t.toString(),
+      });
+    }
+    return errorResult("OAuth state already used and no recent connection to attribute it to");
+  }
 
   // Exchange code for tokens
   const tokenRes = await fetch("https://api.hubapi.com/oauth/v1/token", {
