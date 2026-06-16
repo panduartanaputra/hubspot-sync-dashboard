@@ -2,25 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Metis cockpit tokens */
-  --bg:        #080808;
-  --panel:     #0E0E0E;
-  --panel-2:   #141414;
-  --border:    #1A1A1A;
-  --border-2:  #252525;
-  --text:      #E2E2E2;
-  --text-hi:   #F0F0F0;
-  --text-dim:  #737373;
-  --text-dim2: #555555;
+/* ─────────────────────────────────────────────────────────────
+   Color tokens — stored as RGB channels so Tailwind opacity
+   modifiers (bg-gold/10 etc.) keep working when the theme flips.
+   Dark is the default. Light is applied via [data-theme="light"]
+   on <html> by ThemeProvider.
+   ───────────────────────────────────────────────────────────── */
 
-  --gold:     #E0A030;
-  --gold-dim: rgba(224, 160, 48, 0.10);
-  --cyan:     #00EEFC;
-  --green:    #50B868;
-  --red:      #D05858;
-  --purple:   #A855F7;
-  --blue:     #5B8DEF;
+:root {
+  --bg-rgb:       8 8 8;
+  --panel-rgb:    14 14 14;
+  --panel2-rgb:   20 20 20;
+  --border-rgb:   26 26 26;
+  --border2-rgb:  37 37 37;
+  --text-rgb:     226 226 226;
+  --texthi-rgb:   240 240 240;
+  --textdim-rgb:  115 115 115;
+  --textdim2-rgb: 85 85 85;
+
+  --gold-rgb:    224 160 48;
+  --cyan-rgb:    0 238 252;
+  --green-rgb:   80 184 104;
+  --red-rgb:     208 88 88;
+  --purple-rgb:  168 85 247;
+  --blue-rgb:    91 141 239;
+
+  /* Legacy named vars — kept so anywhere using var(--bg) still works */
+  --bg:        rgb(var(--bg-rgb));
+  --panel:     rgb(var(--panel-rgb));
+  --panel-2:   rgb(var(--panel2-rgb));
+  --border:    rgb(var(--border-rgb));
+  --border-2:  rgb(var(--border2-rgb));
+  --text:      rgb(var(--text-rgb));
+  --text-hi:   rgb(var(--texthi-rgb));
+  --text-dim:  rgb(var(--textdim-rgb));
+  --text-dim2: rgb(var(--textdim2-rgb));
+  --gold:      rgb(var(--gold-rgb));
+  --gold-dim:  rgb(var(--gold-rgb) / 0.10);
+  --cyan:      rgb(var(--cyan-rgb));
+  --green:     rgb(var(--green-rgb));
+  --red:       rgb(var(--red-rgb));
+  --purple:    rgb(var(--purple-rgb));
+  --blue:      rgb(var(--blue-rgb));
+}
+
+[data-theme="light"] {
+  --bg-rgb:       250 250 250;
+  --panel-rgb:    255 255 255;
+  --panel2-rgb:   244 244 244;
+  --border-rgb:   229 229 229;
+  --border2-rgb:  212 212 212;
+  --text-rgb:     26 26 26;
+  --texthi-rgb:   5 5 5;
+  --textdim-rgb:  115 115 115;
+  --textdim2-rgb: 153 153 153;
+
+  /* Accents shifted a touch darker / more saturated so they read on light */
+  --gold-rgb:    184 128 31;
+  --cyan-rgb:    6 145 178;
+  --green-rgb:   22 163 74;
+  --red-rgb:     220 38 38;
+  --purple-rgb:  147 51 234;
+  --blue-rgb:    37 99 235;
 }
 
 html, body {

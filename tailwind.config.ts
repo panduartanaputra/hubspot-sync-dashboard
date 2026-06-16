@@ -5,22 +5,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Metis cockpit palette
-        bg:        "#080808",
-        panel:     "#0E0E0E",
-        panel2:    "#141414",
-        border:    "#1A1A1A",
-        border2:   "#252525",
-        text:      "#E2E2E2",
-        texthi:    "#F0F0F0",
-        textdim:   "#737373",
-        textdim2:  "#555555",
-        gold:      "#E0A030",
-        cyan:      "#00EEFC",
-        green:     "#50B868",
-        red:       "#D05858",
-        purple:    "#A855F7",
-        blue:      "#5B8DEF",
+        // Metis cockpit palette — values resolve via CSS variables so the
+        // ThemeProvider can swap dark/light by toggling data-theme on <html>.
+        bg:        "rgb(var(--bg-rgb) / <alpha-value>)",
+        panel:     "rgb(var(--panel-rgb) / <alpha-value>)",
+        panel2:    "rgb(var(--panel2-rgb) / <alpha-value>)",
+        border:    "rgb(var(--border-rgb) / <alpha-value>)",
+        border2:   "rgb(var(--border2-rgb) / <alpha-value>)",
+        text:      "rgb(var(--text-rgb) / <alpha-value>)",
+        texthi:    "rgb(var(--texthi-rgb) / <alpha-value>)",
+        textdim:   "rgb(var(--textdim-rgb) / <alpha-value>)",
+        textdim2:  "rgb(var(--textdim2-rgb) / <alpha-value>)",
+        gold:      "rgb(var(--gold-rgb) / <alpha-value>)",
+        cyan:      "rgb(var(--cyan-rgb) / <alpha-value>)",
+        green:     "rgb(var(--green-rgb) / <alpha-value>)",
+        red:       "rgb(var(--red-rgb) / <alpha-value>)",
+        purple:    "rgb(var(--purple-rgb) / <alpha-value>)",
+        blue:      "rgb(var(--blue-rgb) / <alpha-value>)",
       },
       fontFamily: {
         mono:  ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],

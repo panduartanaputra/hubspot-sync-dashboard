@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTheme } from "./ThemeProvider";
 
 interface NavItem {
   href: string;
@@ -20,6 +21,7 @@ const STORAGE_KEY = "metis_sidepanel_collapsed";
 
 export default function SidePanel() {
   const pathname = usePathname();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -100,6 +102,16 @@ export default function SidePanel() {
           </div>
         ))}
       </nav>
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="border-t border-border px-3 py-3 text-[10px] label-eyebrow-dim text-textdim hover:text-gold hover:bg-panel2 flex items-center justify-center gap-2"
+        title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        aria-label="Toggle theme"
+      >
+        {collapsed ? (theme === "dark" ? "☀" : "☾") : (theme === "dark" ? "☀ LIGHT" : "☾ DARK")}
+      </button>
 
       {/* Collapse toggle */}
       <button
