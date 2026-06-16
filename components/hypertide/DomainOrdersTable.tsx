@@ -10,6 +10,7 @@ import {
   planLabelUpper,
   statusColor,
 } from "@/lib/hypertide";
+import SendTestModal from "./SendTestModal";
 
 interface Props {
   orders: DomainOrder[];
@@ -34,6 +35,21 @@ const HISTORY_STATUSES = new Set(["cancelled", "failed"]);
 export default function DomainOrdersTable({ orders, mailboxes, integrations, onChange }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterMode>("active");
+  const [sendTarget, setSendTarget] = useState<{ orderId: string; domain: string; masterInbox: string } | null>(null);
+
+  // Map order_id → boolean (is the master mailbox connected to Unipile?)
+  const connectedOrderIds = useMemo(() => {
+    const masterByOrder = new Map<string, Mailbox>();
+    for (const m of mailboxes) if (m.is_master) masterByOrder.set(m.domain_order_id, m);
+    const connectedMailboxIds = new Set(
+      integrations.filter((i) => i.provider === "unipile" && i.status === "connected").map((i) => i.mailbox_id)
+    );
+    const set = new Set<string>();
+    masterByOrder.forEach((m, orderId) => {
+      if (connectedMailboxIds.has(m.id)) set.add(orderId);
+    });
+    return set;
+  }, [mailboxes, integrations]);
 
   const deactivate = async (orderId: string, domain: string) => {
     if (!confirm(`Start the wind-down for "${domain}"?\n\nThis kicks off a 24-hour countdown. Nothing actually changes during those 24 hours — you can hit REVERT at any time to undo this. After 24 hours: the Hypertide subscription is cancelled, mailboxes are removed from Smartlead, and Unipile is disconnected.`)) return;
@@ -196,6 +212,15 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
                         DISCARD
                       </button>
                     )}
+                    {o.status === "done" && connectedOrderIds.has(o.id) && o.master_inbox && (
+                      <button
+                        onClick={() => setSendTarget({ orderId: o.id, domain: o.domain, masterInbox: o.master_inbox! })}
+                        className="px-2 py-1 border border-gold/40 text-gold hover:bg-gold/10 text-[10px] label-eyebrow"
+                        title="Send a one-shot test email via Unipile from this domain's master mailbox (with optional send-as alias)."
+                      >
+                        SEND TEST
+                      </button>
+                    )}
                     {o.status === "done" && (
                       <button
                         onClick={() => deactivate(o.id, o.domain)}
@@ -221,6 +246,14 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
             })}
           </tbody>
         </table>
+      )}
+      {sendTarget && (
+        <SendTestModal
+          orderId={sendTarget.orderId}
+          domain={sendTarget.domain}
+          masterInbox={sendTarget.masterInbox}
+          onClose={() => setSendTarget(null)}
+        />
       )}
     </div>
   );

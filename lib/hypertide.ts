@@ -295,6 +295,11 @@ export const fn = {
       "hypertide-send-hypertide-email",
       args
     ),
+  unipileSend: (args: { domain_order_id: string; to: string; from?: string; display_name?: string; subject?: string; body?: string }) =>
+    invoke<{ success: boolean; domain?: string; master_inbox?: string; from_inbox?: string; display_name?: string; tracking_id?: string; provider_id?: string; status?: number; detail?: unknown; error?: string }>(
+      "hypertide-unipile-send",
+      args
+    ),
   syncMasterFromSheet: (args?: { client_id?: string }) =>
     invoke<{ success: boolean; synced_clients: number; summary: Array<{ client_id: string; matched: Array<{ domain: string; plan: string; master_inbox: string }>; unmatched: Array<{ domain: string; plan: string; reason?: string; sheet_master?: string; db_mailboxes?: string[] }>; waiting_resolved: boolean }> }>(
       "hypertide-sync-master-from-sheet",
