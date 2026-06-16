@@ -78,7 +78,12 @@ export default function DomainOrdersTable({ orders, mailboxes, integrations, onC
   };
 
   const discard = async (orderId: string, domain: string) => {
-    if (!confirm(`Drop the unpaid order for "${domain}"?\n\nNothing was charged yet, so this just removes it from our list. Hypertide is not affected.`)) return;
+    if (!confirm(
+      `Drop the unpaid order for "${domain}"?\n\n` +
+      `✓ The order is removed from the cockpit.\n` +
+      `✗ The order is NOT removed from Hypertide's Todo / Unpaid cart — Hypertide doesn't expose a public delete endpoint.\n\n` +
+      `To fully clean up, also delete it manually from the Hypertide dashboard. (Tracked open thread: waiting on Hypertide support to confirm the correct API call.)`
+    )) return;
     setBusy(orderId);
     try {
       await fn.discardOrder({ domain_order_id: orderId });
