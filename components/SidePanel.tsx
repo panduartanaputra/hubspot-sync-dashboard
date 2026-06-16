@@ -49,7 +49,7 @@ export default function SidePanel() {
 
   return (
     <aside
-      className={`shrink-0 border-r border-border bg-panel min-h-screen flex flex-col transition-[width] duration-150 ${
+      className={`shrink-0 border-r border-border bg-panel sticky top-0 h-screen flex flex-col transition-[width] duration-150 ${
         collapsed ? "w-[56px]" : "w-[200px]"
       }`}
     >
