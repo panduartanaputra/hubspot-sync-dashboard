@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import OnboardForm from "@/components/hypertide/OnboardForm";
 import DomainOrdersTable from "@/components/hypertide/DomainOrdersTable";
@@ -51,7 +51,16 @@ import {
   fn,
 } from "@/lib/hypertide";
 
-export default function HypertidePage() {
+export default function HypertidePageWrapper() {
+  // useSearchParams must be inside a Suspense boundary for static prerendering
+  return (
+    <Suspense fallback={<div className="p-6 text-textdim text-xs label-eyebrow-dim">LOADING COCKPIT…</div>}>
+      <HypertidePage />
+    </Suspense>
+  );
+}
+
+function HypertidePage() {
   const searchParams = useSearchParams();
   // Deep-link from payment-link email: ?client=<uuid>&approve=<id1>,<id2>
   const deepLinkClient = searchParams.get("client");
