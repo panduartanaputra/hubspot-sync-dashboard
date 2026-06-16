@@ -26,7 +26,8 @@ export type PendingActionType =
   | "disconnect_unipile"
   | "replace_approve"
   | "remove_from_smartlead"
-  | "onboard_replacement";
+  | "onboard_replacement"
+  | "waiting_for_hypertide_sheet";
 
 export type PendingActionStatus = "pending" | "in_progress" | "done" | "skipped";
 
@@ -249,7 +250,15 @@ export const fn = {
     invoke("hypertide-cancel-subscription", args),
   tick: () => invoke<{ metrics_inserted: number; replacements_proposed: number }>("hypertide-tick", {}),
   resolveAction: (args: { pending_action_id: string; payload?: Record<string, unknown> }) =>
-    invoke("hypertide-resolve-action", args),
+    invoke<{
+      success: boolean;
+      action?: string;
+      mode?: "live" | "full_mock";
+      unipile_link_url?: string;
+      account_link_pending?: boolean;
+      code?: string;
+      message?: string;
+    }>("hypertide-resolve-action", args),
   discardOrder: (args: { domain_order_id: string }) => invoke("hypertide-discard-order", args),
   offboardClient: (args: { client_id: string }) =>
     invoke<{ success: boolean; client: string; summary: { discarded: number; scheduled: number; skipped_actions: number } }>(
@@ -280,6 +289,16 @@ export const fn = {
     invoke<{ success: boolean; updated: number }>(
       "hypertide-fastforward-warmup",
       args
+    ),
+  sendHypertideEmail: (args: { client_id: string; dry_run?: boolean }) =>
+    invoke<{ success?: boolean; skipped?: boolean; reason?: string; message_id?: string; thread_id?: string; domains?: string[]; dry_run?: boolean; subject?: string; body?: string; error?: string; detail?: unknown }>(
+      "hypertide-send-hypertide-email",
+      args
+    ),
+  syncMasterFromSheet: (args?: { client_id?: string }) =>
+    invoke<{ success: boolean; synced_clients: number; summary: Array<{ client_id: string; matched: Array<{ domain: string; plan: string; master_inbox: string }>; unmatched: Array<{ domain: string; plan: string; reason?: string; sheet_master?: string; db_mailboxes?: string[] }>; waiting_resolved: boolean }> }>(
+      "hypertide-sync-master-from-sheet",
+      args ?? {}
     ),
 };
 

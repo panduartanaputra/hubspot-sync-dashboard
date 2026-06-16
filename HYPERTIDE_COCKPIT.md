@@ -431,6 +431,8 @@ All deployed in Supabase project `ttqiesrxpmcduigjiovm`, prefix `hypertide-`. Ea
 | `hypertide-check-warmup` | CHECK WARMUP / hourly cron | Sweeps mailboxes, marks `smartlead_warmup_completed_at` where elapsed > 14d, rolls up to the WARMUP column. |
 | `hypertide-fastforward-warmup` | FAST-FORWARD WARMUP button | Sim-only — backdates `smartlead_warmup_started_at` by N days for the active client. |
 | `hypertide-reset-client` | RESET <CLIENT> button | Sim-only — deletes every row tied to the client across orders / mailboxes / pending_actions / integrations / metrics / job_log. Hard-gated to `full_mock` mode. |
+| `hypertide-unipile-connect` | `resolve-action` (live mode) | Calls Unipile `POST /hosted/accounts/link`, returns a one-time auth URL. The cockpit opens that URL in a new tab — the user authenticates Google / Outlook on Unipile-hosted pages. |
+| `hypertide-unipile-webhook` | Unipile's `notify_url` callback | Receives Unipile's `CREATION_SUCCESS`, upserts `integration_connections.external_account_id`, flips the owning order to `done`, resolves the pending action. Authenticated by `?secret=<unipile_webhook_secret>` in the URL. |
 
 ---
 
@@ -466,7 +468,27 @@ Stored in Supabase Vault, read via the `get_secret` SQL function (which Edge Fun
 | `hypertide_api_key` | Every Edge Function that hits Hypertide |
 | `hypertide_base_url` | Same — lets us swap sandbox / prod by changing one row |
 | `smartlead_api_key` | `hypertide-smartlead-remove`, future warm-up checker |
+| `unipile_api_key` | `hypertide-unipile-connect`, `hypertide-finalize-cancellations` (live disconnect) |
+| `unipile_dsn` | Same — per-tenant base host:port (e.g. `api8.unipile.com:13852`) |
+| `unipile_webhook_secret` | `hypertide-unipile-webhook` — shared secret validated from `?secret=` query param |
 | `supabase_service_role_key` | Cron functions that need to reach the Edge Function HTTP endpoints (since `pg_net` needs an auth header) |
+
+### Going live on Unipile
+
+One-time setup once an API key is on hand:
+
+1. Store the three Unipile secrets via the Supabase SQL editor:
+   ```sql
+   SELECT vault.create_secret('<API_KEY>',          'unipile_api_key',        'Unipile API key');
+   SELECT vault.create_secret('apiN.unipile.com:13NNN','unipile_dsn',         'Unipile DSN host:port');
+   SELECT vault.create_secret(gen_random_uuid()::text,'unipile_webhook_secret','Webhook shared secret');
+   ```
+2. Copy the webhook secret value out of `vault.decrypted_secrets`, build the notify URL:
+   ```
+   https://ttqiesrxpmcduigjiovm.supabase.co/functions/v1/hypertide-unipile-webhook?secret=<UNIPILE_WEBHOOK_SECRET>
+   ```
+   The `?pa=<pending_action_id>` query param is appended automatically per-mailbox by `hypertide-unipile-connect`. No need to register the webhook in Unipile's dashboard — `notify_url` is passed per-link in the API call.
+3. Flip `simulation_config.mode` to `live`. The cockpit's CONNECT UNIPILE button changes from STUB CONNECT to OPEN UNIPILE AUTH automatically.
 
 ---
 

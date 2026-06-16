@@ -38,6 +38,7 @@ interface Props {
   mailboxes: Mailbox[];
   orders: DomainOrder[];
   integrations: IntegrationConnection[];
+  simMode?: "full_mock" | "hypertide_live_unipile_off" | "live";
   onChange: () => void;
 }
 
@@ -63,8 +64,11 @@ export default function PendingActionsList({
   mailboxes,
   orders,
   integrations,
+  simMode = "full_mock",
   onChange,
 }: Props) {
+  // 'live' uses real Unipile; 'hypertide_live_unipile_off' keeps Unipile mocked.
+  const isUnipileLive = simMode === "live";
   const [busy, setBusy] = useState<string | null>(null);
   const [masterChoice, setMasterChoice] = useState<Record<string, string>>({});
   const [simChoice, setSimChoice] = useState<Record<string, string>>({});
@@ -97,7 +101,13 @@ export default function PendingActionsList({
     }
     setBusy(a.id);
     try {
-      await fn.resolveAction({ pending_action_id: a.id, payload });
+      const res = await fn.resolveAction({ pending_action_id: a.id, payload });
+      // Live Unipile flow: backend returns a hosted-auth URL. Open it in a new
+      // tab — the webhook will flip the integration to connected once the user
+      // completes the OAuth flow on Unipile-hosted pages.
+      if (res?.unipile_link_url) {
+        window.open(res.unipile_link_url, "_blank", "noopener,noreferrer");
+      }
       onChange();
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
@@ -191,7 +201,17 @@ export default function PendingActionsList({
                     CONFIRM
                   </button>
                 )}
-                {a.action_type === "connect_unipile" && (
+                {a.action_type === "connect_unipile" && isUnipileLive && (
+                  <button
+                    onClick={() => resolve(a)}
+                    disabled={busy === a.id}
+                    className="px-3 py-1 border border-purple/60 text-purple hover:bg-purple/10 text-[10px] label-eyebrow disabled:opacity-30"
+                    title="Opens the Unipile hosted-auth flow in a new tab. The integration flips to CONNECTED once the user finishes authenticating."
+                  >
+                    {failedIntegration ? "RETRY UNIPILE AUTH" : "OPEN UNIPILE AUTH"}
+                  </button>
+                )}
+                {a.action_type === "connect_unipile" && !isUnipileLive && (
                   <>
                     <select
                       value={simChoice[a.id] ?? "success"}
@@ -253,6 +273,65 @@ export default function PendingActionsList({
                     RETRY SMARTLEAD REMOVE
                   </button>
                 )}
+                {a.action_type === "waiting_for_hypertide_sheet" && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        if (!a.client_id) return;
+                        setBusy(a.id);
+                        try {
+                          const res = await fn.syncMasterFromSheet({ client_id: a.client_id });
+                          const s = res.summary?.[0];
+                          if (s) {
+                            const lines = [
+                              s.matched.length ? `Matched ${s.matched.length}: ${s.matched.map((m) => `${m.domain} → ${m.master_inbox}`).join(", ")}` : "No new matches.",
+                              s.unmatched.length ? `Still waiting on: ${s.unmatched.map((u) => u.domain).join(", ")}` : "",
+                            ].filter(Boolean).join("\n\n");
+                            alert(lines || "No changes.");
+                          }
+                          onChange();
+                        } catch (e) {
+                          alert(e instanceof Error ? e.message : String(e));
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                      disabled={busy === a.id}
+                      className="px-3 py-1 border border-gold/60 text-gold hover:bg-gold/10 text-[10px] label-eyebrow disabled:opacity-30"
+                    >
+                      PULL FROM SHEET
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!a.client_id) return;
+                        if (!confirm("Re-send the master-inbox setup email to support@hypertide.io?")) return;
+                        setBusy(a.id);
+                        try {
+                          const res = await fn.sendHypertideEmail({ client_id: a.client_id });
+                          if (res.error) alert(`Failed: ${res.error}`);
+                          else alert(`Email re-sent. ${res.domains ? `Covered: ${res.domains.join(", ")}` : ""}`);
+                          onChange();
+                        } catch (e) {
+                          alert(e instanceof Error ? e.message : String(e));
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                      disabled={busy === a.id}
+                      className="px-3 py-1 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
+                    >
+                      RE-SEND EMAIL
+                    </button>
+                    <a
+                      href={`https://docs.google.com/spreadsheets/d/1Jewsvql9CsFdHYYBwkAGGEVlYT2uJIIXn1lpumEkyr8/edit`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 border border-textdim/40 text-textdim hover:bg-border2 text-[10px] label-eyebrow"
+                    >
+                      OPEN SHEET ↗
+                    </a>
+                  </>
+                )}
                 {a.action_type === "replace_approve" && (
                   <button
                     onClick={() => resolve(a)}
@@ -282,6 +361,20 @@ export default function PendingActionsList({
                 </span>
               </div>
             )}
+            {a.action_type === "waiting_for_hypertide_sheet" && (() => {
+              const domains = ((a.payload as { domains?: Array<{ domain: string; plan: string }> }).domains ?? [])
+                .map((d) => `${d.domain} (${d.plan === "entra" ? "Outlook" : "Google"})`)
+                .join(", ") || "(none)";
+              return (
+                <div className="mt-2 ml-44 pl-4 border-l-2 border-gold/60 text-[11px] text-textdim">
+                  <span className="label-eyebrow text-gold mr-2">AWAITING HYPERTIDE</span>
+                  Email sent to <span className="font-mono text-text">support@hypertide.io</span>.
+                  Once they fill the tracker sheet with the chosen master inbox + password for
+                  each domain, click <span className="text-text">PULL FROM SHEET</span> to sync.
+                  <div className="mt-1 text-textdim2">Pending domains: <span className="font-mono text-text">{domains}</span></div>
+                </div>
+              );
+            })()}
             {a.action_type === "onboard_replacement" && (() => {
               const planRaw = (a.payload as { plan?: string }).plan;
               const planText = planRaw === "entra" ? "Outlook" : planRaw === "google" ? "Google" : "?";

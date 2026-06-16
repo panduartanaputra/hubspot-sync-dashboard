@@ -345,6 +345,7 @@ export default function HypertidePage() {
               mailboxes={mailboxes}
               orders={orders}
               integrations={integrations}
+              simMode={sim?.mode ?? "full_mock"}
               onChange={refresh}
             />
           </section>
