@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import OnboardForm from "@/components/hypertide/OnboardForm";
 import DomainOrdersTable from "@/components/hypertide/DomainOrdersTable";
 import PendingActionsList from "@/components/hypertide/PendingActionsList";
@@ -51,6 +52,15 @@ import {
 } from "@/lib/hypertide";
 
 export default function HypertidePage() {
+  const searchParams = useSearchParams();
+  // Deep-link from payment-link email: ?client=<uuid>&approve=<id1>,<id2>
+  const deepLinkClient = searchParams.get("client");
+  const deepLinkApproveIds = useMemo(() => {
+    const raw = searchParams.get("approve");
+    if (!raw) return [] as string[];
+    return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  }, [searchParams]);
+
   const [clients, setClients] = useState<Client[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [billing, setBilling] = useState<BillingConfig | null>(null);
@@ -74,15 +84,16 @@ export default function HypertidePage() {
       const c = await fetchClients();
       setClients(c);
       if (!activeClientId && c.length > 0) {
-        // Prefer the client persisted in localStorage from a prior session, if it still exists.
+        // Precedence: deep-link ?client=<uuid> > localStorage > first client.
+        const linked = deepLinkClient ? c.find((x) => x.id === deepLinkClient) : null;
         const stored = typeof window !== "undefined" ? localStorage.getItem("hypertide_active_client_id") : null;
-        const match = stored ? c.find((x) => x.id === stored) : null;
-        setActiveClientId(match?.id ?? c[0].id);
+        const storedMatch = stored ? c.find((x) => x.id === stored) : null;
+        setActiveClientId(linked?.id ?? storedMatch?.id ?? c[0].id);
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
-  }, [activeClientId]);
+  }, [activeClientId, deepLinkClient]);
 
   const refresh = useCallback(async () => {
     if (!activeClientId) return;
@@ -229,6 +240,35 @@ export default function HypertidePage() {
         <div className="text-textdim text-xs label-eyebrow-dim">NO CLIENT SELECTED</div>
       ) : (
         <>
+          {/* Deep-link banner: highlight pending APPROVE PAYMENT actions when the user arrived via the payment-link email */}
+          {deepLinkApproveIds.length > 0 && (() => {
+            const targeted = actions.filter((a) => a.action_type === "approve_payment" && a.domain_order_id && deepLinkApproveIds.includes(a.domain_order_id) && a.status === "pending");
+            const resolved = deepLinkApproveIds.length - targeted.length;
+            return (
+              <section className="mb-6 border border-gold/60 bg-gold/10 p-4">
+                <div className="label-eyebrow text-gold mb-1">PAYMENT APPROVAL REQUESTED</div>
+                <div className="text-xs text-text">
+                  You arrived via the payment-link email. {targeted.length > 0 ? (
+                    <>Scroll to <span className="text-gold">PENDING ACTIONS · {actions.length}</span> below and click <span className="text-gold font-bold">APPROVE PAYMENT</span> for each of the {targeted.length} order(s) below.</>
+                  ) : (
+                    <>All {deepLinkApproveIds.length} order(s) referenced by this link have already been approved or no longer exist.</>
+                  )}
+                </div>
+                {targeted.length > 0 && (
+                  <ul className="mt-2 text-[11px] text-textdim list-disc pl-5">
+                    {targeted.map((a) => {
+                      const p = (a.payload as { domain?: string; plan?: string });
+                      return <li key={a.id}><span className="font-mono text-text">{p?.domain ?? "?"}</span> <span className="text-textdim2">({p?.plan === "entra" ? "Outlook" : "Google"})</span></li>;
+                    })}
+                  </ul>
+                )}
+                {resolved > 0 && (
+                  <div className="mt-2 text-[10px] text-textdim2">{resolved} of {deepLinkApproveIds.length} already resolved.</div>
+                )}
+              </section>
+            );
+          })()}
+
           {/* Simulation strip */}
           <section className="mb-6 border border-border bg-panel p-4">
             <div className="flex items-center justify-between">
