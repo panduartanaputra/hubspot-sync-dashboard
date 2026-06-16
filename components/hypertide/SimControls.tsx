@@ -91,52 +91,54 @@ export default function SimControls({ sim, onChange }: Props) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="text-[10px] label-eyebrow-dim">
+    <div>
+      <div className="text-[10px] label-eyebrow-dim mb-3">
         MODE: <span className="text-gold">{sim?.mode ?? "?"}</span> · DRY-RUN:{" "}
         <span className="text-gold">{sim?.force_dry_run ? "ON" : "OFF"}</span>
       </div>
-      <div className="flex items-center">
-        <button
-          onClick={() => wrap("tick", () => fn.tick())}
-          disabled={busy !== null}
-          className="px-3 py-1.5 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
-        >
-          {busy === "tick" ? "TICKING…" : "TICK SIMULATION"}
-        </button>
-        <HelpIcon help={TICK_HELP} />
+      <div className="grid grid-cols-[max-content_max-content] gap-3">
+        <div className="flex items-center">
+          <button
+            onClick={() => wrap("tick", () => fn.tick())}
+            disabled={busy !== null}
+            className="px-3 py-1.5 border border-cyan/40 text-cyan hover:bg-cyan/10 text-[10px] label-eyebrow disabled:opacity-30"
+          >
+            {busy === "tick" ? "TICKING…" : "TICK SIMULATION"}
+          </button>
+          <HelpIcon help={TICK_HELP} />
+        </div>
+        <div className="flex items-center">
+          <button
+            onClick={() => wrap("poll", () => fn.pollOrders())}
+            disabled={busy !== null}
+            className="px-3 py-1.5 border border-blue/40 text-blue hover:bg-blue/10 text-[10px] label-eyebrow disabled:opacity-30"
+          >
+            {busy === "poll" ? "POLLING…" : "POLL ORDERS"}
+          </button>
+          <HelpIcon help={POLL_HELP} />
+        </div>
+        <div className="flex items-center">
+          <button
+            onClick={() => wrap("finalize", () => fn.finalizeCancellations({ force: true }))}
+            disabled={busy !== null}
+            className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow disabled:opacity-30"
+          >
+            {busy === "finalize" ? "FINALIZING…" : "FINALIZE CANCELLATIONS"}
+          </button>
+          <HelpIcon help={FINALIZE_HELP} />
+        </div>
+        <div className="flex items-center">
+          <button
+            onClick={() => wrap("warmup", () => fn.checkWarmup())}
+            disabled={busy !== null}
+            className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow disabled:opacity-30"
+          >
+            {busy === "warmup" ? "CHECKING…" : "CHECK WARMUP"}
+          </button>
+          <HelpIcon help={WARMUP_HELP} />
+        </div>
       </div>
-      <div className="flex items-center">
-        <button
-          onClick={() => wrap("poll", () => fn.pollOrders())}
-          disabled={busy !== null}
-          className="px-3 py-1.5 border border-blue/40 text-blue hover:bg-blue/10 text-[10px] label-eyebrow disabled:opacity-30"
-        >
-          {busy === "poll" ? "POLLING…" : "POLL ORDERS"}
-        </button>
-        <HelpIcon help={POLL_HELP} />
-      </div>
-      <div className="flex items-center">
-        <button
-          onClick={() => wrap("finalize", () => fn.finalizeCancellations({ force: true }))}
-          disabled={busy !== null}
-          className="px-3 py-1.5 border border-red/40 text-red hover:bg-red/10 text-[10px] label-eyebrow disabled:opacity-30"
-        >
-          {busy === "finalize" ? "FINALIZING…" : "FINALIZE CANCELLATIONS"}
-        </button>
-        <HelpIcon help={FINALIZE_HELP} />
-      </div>
-      <div className="flex items-center">
-        <button
-          onClick={() => wrap("warmup", () => fn.checkWarmup())}
-          disabled={busy !== null}
-          className="px-3 py-1.5 border border-green/40 text-green hover:bg-green/10 text-[10px] label-eyebrow disabled:opacity-30"
-        >
-          {busy === "warmup" ? "CHECKING…" : "CHECK WARMUP"}
-        </button>
-        <HelpIcon help={WARMUP_HELP} />
-      </div>
-      {msg && <div className="text-textdim text-[10px] ml-2 truncate max-w-md">{msg}</div>}
+      {msg && <div className="text-textdim text-[10px] mt-3 truncate max-w-md">{msg}</div>}
     </div>
   );
 }
