@@ -73,7 +73,12 @@ export default function HypertidePage() {
     try {
       const c = await fetchClients();
       setClients(c);
-      if (!activeClientId && c.length > 0) setActiveClientId(c[0].id);
+      if (!activeClientId && c.length > 0) {
+        // Prefer the client persisted in localStorage from a prior session, if it still exists.
+        const stored = typeof window !== "undefined" ? localStorage.getItem("hypertide_active_client_id") : null;
+        const match = stored ? c.find((x) => x.id === stored) : null;
+        setActiveClientId(match?.id ?? c[0].id);
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
@@ -175,7 +180,14 @@ export default function HypertidePage() {
             <div className="label-eyebrow-dim">CLIENT</div>
             <select
               value={activeClientId ?? ""}
-              onChange={(e) => setActiveClientId(e.target.value || null)}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                setActiveClientId(v);
+                if (typeof window !== "undefined") {
+                  if (v) localStorage.setItem("hypertide_active_client_id", v);
+                  else localStorage.removeItem("hypertide_active_client_id");
+                }
+              }}
               className="bg-panel2 border border-border2 px-2 py-1 text-xs text-texthi mt-1"
             >
               {clients.map((c) => (
