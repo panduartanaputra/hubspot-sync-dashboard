@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { buildStageMapFromLabels, pickDefaultPipeline, type PipelinesPayload } from "@/lib/hubspotPipelines";
 
 const CLIENT_ID = process.env.HUBSPOT_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.HUBSPOT_OAUTH_CLIENT_SECRET;
@@ -182,6 +183,30 @@ export async function GET(req: Request) {
   const expiresAt = new Date(Date.now() + (tokens.expires_in - 60) * 1000).toISOString();
   const { data: anyClient } = await sb.from("clients").select("id").limit(1).maybeSingle();
 
+  // Phase 2b: fetch the user's deal pipelines and pick an initial default
+  // pipeline + auto-build a stage_map by label heuristic. Best-effort —
+  // failure here doesn't block the connection from being saved.
+  let pipelinesCache: PipelinesPayload | null = null;
+  let initialPipelineId: string | null = null;
+  let initialStageMap: Record<string, string> | null = null;
+  try {
+    const pipelinesRes = await fetch("https://api.hubapi.com/crm/v3/pipelines/deals", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (pipelinesRes.ok) {
+      pipelinesCache = await pipelinesRes.json() as PipelinesPayload;
+      const picked = pickDefaultPipeline(pipelinesCache);
+      if (picked) {
+        initialPipelineId = picked.id;
+        initialStageMap = buildStageMapFromLabels(picked);
+      }
+    } else {
+      console.warn("pipelines fetch failed:", pipelinesRes.status, await pipelinesRes.text());
+    }
+  } catch (e) {
+    console.warn("pipelines fetch threw:", e instanceof Error ? e.message : String(e));
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // UPSERT pattern: if a connection already exists for this portal, refresh
   // its tokens in place. Otherwise insert a new row. This eliminates the
@@ -196,6 +221,14 @@ export async function GET(req: Request) {
     .order("connected_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Build pipeline-related fields only when the fetch succeeded — for reconnects,
+  // we preserve any user-customized stage_map/pipeline_id by omitting the keys.
+  const pipelineFields: Record<string, unknown> = {};
+  if (pipelinesCache) {
+    pipelineFields.pipelines_cache = pipelinesCache;
+    pipelineFields.pipelines_cached_at = new Date().toISOString();
+  }
 
   if (existing) {
     // Refresh tokens + reactivate the existing connection row.
@@ -212,6 +245,7 @@ export async function GET(req: Request) {
       is_active: true,
       disconnected_at: null,
       last_refresh_at: new Date().toISOString(),
+      ...pipelineFields,
     }).eq("id", existing.id);
     if (updateErr) return errorResult(`Failed to refresh connection: ${updateErr.message}`);
   } else {
@@ -227,6 +261,11 @@ export async function GET(req: Request) {
       scopes,
       hub_domain: account.uiDomain,
       is_active: true,
+      // First-time connect only: seed pipeline_id + stage_map from the heuristic.
+      // On reconnect we don't overwrite — preserves any user customization.
+      pipeline_id: initialPipelineId,
+      stage_map: initialStageMap,
+      ...pipelineFields,
     });
     if (insertErr) return errorResult(`Failed to save connection: ${insertErr.message}`);
   }

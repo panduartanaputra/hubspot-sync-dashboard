@@ -90,6 +90,8 @@ export async function updateMeetingStatus(meetingId: string, status: "held" | "n
   if (error) throw error;
 }
 
+import type { PipelinesPayload } from "./hubspotPipelines";
+
 export interface HubSpotConnection {
   id: string;
   hubspot_portal_id: number;
@@ -98,18 +100,34 @@ export interface HubSpotConnection {
   scopes: string[];
   connected_at: string;
   is_active: boolean;
+  pipeline_id: string | null;
+  stage_map: Record<string, string> | null;
+  pipelines_cache: PipelinesPayload | null;
+  pipelines_cached_at: string | null;
 }
 
 export async function fetchActiveConnection(): Promise<HubSpotConnection | null> {
   const { data, error } = await supabase
     .from("hubspot_connections")
-    .select("id,hubspot_portal_id,hubspot_user_email,hub_domain,scopes,connected_at,is_active")
+    .select("id,hubspot_portal_id,hubspot_user_email,hub_domain,scopes,connected_at,is_active,pipeline_id,stage_map,pipelines_cache,pipelines_cached_at")
     .eq("is_active", true)
     .order("connected_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data as HubSpotConnection | null;
+}
+
+export async function savePipelineMapping(args: {
+  pipeline_id: string | null;
+  stage_map: Record<string, string> | null;
+}) {
+  const res = await fetch("/api/hubspot/pipeline", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) throw new Error(`Save pipeline failed: ${await res.text()}`);
 }
 
 export async function disconnectHubSpot() {

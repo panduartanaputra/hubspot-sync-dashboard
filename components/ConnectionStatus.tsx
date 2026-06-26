@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchActiveConnection, disconnectHubSpot, HubSpotConnection } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
+import PipelineMapper from "@/components/PipelineMapper";
 
 export default function ConnectionStatus() {
   const [conn, setConn] = useState<HubSpotConnection | null>(null);
@@ -10,6 +11,7 @@ export default function ConnectionStatus() {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [flashTone, setFlashTone] = useState<"info" | "error">("info");
+  const [showPipeline, setShowPipeline] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   function showFlash(msg: string, tone: "info" | "error" = "info", ms = 5000) {
@@ -146,13 +148,26 @@ export default function ConnectionStatus() {
           {conn.hubspot_user_email && (
             <div className="text-[10px] text-textdim tracking-wider">{conn.hubspot_user_email}</div>
           )}
-          <button
-            onClick={handleDisconnect}
-            disabled={busy}
-            className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2 hover:text-red disabled:opacity-50 mt-0.5"
-          >
-            Disconnect
-          </button>
+          <div className="flex items-center gap-1 mt-0.5">
+            <button
+              onClick={() => setShowPipeline((s) => !s)}
+              className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2 hover:text-texthi"
+            >
+              {showPipeline ? "Hide pipeline" : "Pipeline ▸"}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              disabled={busy}
+              className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2 hover:text-red disabled:opacity-50"
+            >
+              Disconnect
+            </button>
+          </div>
+          {showPipeline && (
+            <div className="w-[420px] mt-2 p-3 border border-border2 bg-panel/50">
+              <PipelineMapper conn={conn} onSaved={refresh} />
+            </div>
+          )}
         </>
       ) : (
         <>
