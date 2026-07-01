@@ -39,9 +39,9 @@ export default function HomePage() {
       <header className="flex items-end justify-between mb-8 pb-5 border-b border-border">
         <div>
           <div className="label-eyebrow mb-1.5">METIS · LEAD HANDOFF</div>
-          <h1 className="font-serif text-[26px] font-bold text-texthi leading-none">HubSpot Sync Cockpit</h1>
+          <h1 className="font-serif text-[26px] font-bold text-texthi leading-none">Sync Cockpit</h1>
           <p className="text-xs text-textdim mt-2">
-            Move leads through the funnel. Confirmed meetings auto-push to HubSpot.
+            Move leads through the funnel. Confirmed meetings sync to your connected CRM.
           </p>
         </div>
         <ConnectionStatus />
