@@ -121,7 +121,7 @@ export async function fetchActiveConnection(): Promise<HubSpotConnection | null>
   return data as HubSpotConnection | null;
 }
 
-/** Count soft-deleted (in grace window) mirror rows — for the "Purge now" affordance. */
+/** Count soft-deleted (in grace window) mirror rows — for the post-disconnect "Purge now". */
 export async function fetchPendingMirrorCount(): Promise<number> {
   const { count, error } = await supabase
     .from("hubspot_mirror")
@@ -131,12 +131,37 @@ export async function fetchPendingMirrorCount(): Promise<number> {
   return count ?? 0;
 }
 
-/** Immediately hard-delete soft-deleted mirror data (GDPR erasure). */
-export async function purgeMirrorNow(): Promise<number> {
-  const res = await fetch("/api/hubspot/purge", { method: "POST" });
+/** Count LIVE mirror rows for a connection — for the connected-state retention note + purge. */
+export async function fetchLiveMirrorCount(connectionId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("hubspot_mirror")
+    .select("id", { count: "exact", head: true })
+    .eq("connection_id", connectionId)
+    .is("deleted_at", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Immediately hard-delete mirrored data (GDPR erasure), no 30-day wait.
+ * Pass a connectionId to erase that connection's mirror on demand (still
+ * connected); omit it to erase soft-deleted rows after a disconnect.
+ */
+export async function purgeMirrorNow(connectionId?: string): Promise<number> {
+  const res = await fetch("/api/hubspot/purge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(connectionId ? { connectionId } : {}),
+  });
   if (!res.ok) throw new Error(`Purge failed: ${await res.text()}`);
   const body = await res.json();
   return body.purged ?? 0;
+}
+
+/** Re-pull the portal's deal pipelines from HubSpot (picks up pipelines created after connect). */
+export async function refreshPipelines(): Promise<void> {
+  const res = await fetch("/api/hubspot/pipeline/refresh", { method: "POST" });
+  if (!res.ok) throw new Error(`Refresh pipelines failed: ${await res.text()}`);
 }
 
 export async function savePipelineMapping(args: {

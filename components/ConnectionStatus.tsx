@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchActiveConnection, disconnectHubSpot, fetchPendingMirrorCount, purgeMirrorNow, HubSpotConnection } from "@/lib/queries";
+import { fetchActiveConnection, disconnectHubSpot, fetchPendingMirrorCount, fetchLiveMirrorCount, purgeMirrorNow, HubSpotConnection } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import ConnectSyncModal from "@/components/ConnectSyncModal";
 import IntegrationsPanel from "@/components/IntegrationsPanel";
@@ -19,6 +19,7 @@ export default function ConnectionStatus() {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showPanel, setShowPanel] = useState(false);
   const [pendingMirror, setPendingMirror] = useState(0);
+  const [liveMirror, setLiveMirror] = useState(0);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   function showFlash(msg: string, tone: "info" | "error" = "info", ms = 5000) {
@@ -29,8 +30,10 @@ export default function ConnectionStatus() {
 
   async function refresh() {
     try {
-      setConn(await fetchActiveConnection());
+      const c = await fetchActiveConnection();
+      setConn(c);
       try { setPendingMirror(await fetchPendingMirrorCount()); } catch { /* non-fatal */ }
+      try { setLiveMirror(c ? await fetchLiveMirrorCount(c.id) : 0); } catch { /* non-fatal */ }
     } catch (e) {
       console.error("connection fetch failed:", e);
     } finally {
@@ -51,10 +54,10 @@ export default function ConnectionStatus() {
     }
   }
 
-  async function doPurge() {
+  async function doPurge(connectionId?: string) {
     setBusy(true);
     try {
-      const n = await purgeMirrorNow();
+      const n = await purgeMirrorNow(connectionId);
       await refresh();
       showFlash(`Purged ${n} mirrored record${n === 1 ? "" : "s"}`, "info", 4000);
     } catch (e) {
@@ -167,10 +170,12 @@ export default function ConnectionStatus() {
         <IntegrationsPanel
           conn={conn}
           pendingMirror={pendingMirror}
+          liveMirror={liveMirror}
           busy={busy}
           onConnectHubSpot={() => { setShowPanel(false); setShowConnectModal(true); }}
           onDisconnectHubSpot={doDisconnect}
-          onPurge={doPurge}
+          onPurge={() => doPurge()}
+          onPurgeConnection={() => { if (conn) doPurge(conn.id); }}
           onPipelineSaved={refresh}
           onClose={() => setShowPanel(false)}
         />

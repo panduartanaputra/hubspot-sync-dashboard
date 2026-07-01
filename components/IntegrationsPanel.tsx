@@ -35,24 +35,28 @@ const CONNECTORS: Connector[] = [
 export default function IntegrationsPanel({
   conn,
   pendingMirror,
+  liveMirror,
   busy,
   onConnectHubSpot,
   onDisconnectHubSpot,
   onPurge,
+  onPurgeConnection,
   onPipelineSaved,
   onClose,
 }: {
   conn: HubSpotConnection | null;
   pendingMirror: number;
+  liveMirror: number;
   busy: boolean;
   onConnectHubSpot: () => void;
   onDisconnectHubSpot: () => void;
   onPurge: () => void;
+  onPurgeConnection: () => void;
   onPipelineSaved: () => void;
   onClose: () => void;
 }) {
   const [showPipeline, setShowPipeline] = useState(false);
-  const [confirmKind, setConfirmKind] = useState<null | "disconnect" | "purge">(null);
+  const [confirmKind, setConfirmKind] = useState<null | "disconnect" | "purge" | "purge_live">(null);
   const dropped = conn?.sync_config && conn?.granted_scopes
     ? droppedOptionalScopes(conn.sync_config, conn.granted_scopes) : [];
 
@@ -157,6 +161,25 @@ export default function IntegrationsPanel({
                         <PipelineMapper conn={conn} onSaved={onPipelineSaved} />
                       </div>
                     )}
+
+                    {/* Data & retention — visible while connected so users always
+                        know what's held and can erase it on demand (no 30-day wait). */}
+                    <div className="mt-2 pt-2 border-t border-border2/60 text-[10px] text-textdim tracking-wider">
+                      Metis is mirroring <span className="text-texthi">{liveMirror}</span> record{liveMirror === 1 ? "" : "s"} from HubSpot.
+                      On disconnect they’re hidden instantly and deleted after 30 days.{" "}
+                      {liveMirror > 0 && (
+                        confirmKind === "purge_live" ? (
+                          <span>
+                            Delete now?{" "}
+                            <button onClick={() => { setConfirmKind(null); onPurgeConnection(); }} disabled={busy} className="underline text-red hover:text-red disabled:opacity-50">Yes</button>
+                            {" · "}
+                            <button onClick={() => setConfirmKind(null)} className="underline hover:text-texthi">No</button>
+                          </span>
+                        ) : (
+                          <button onClick={() => setConfirmKind("purge_live")} disabled={busy} className="underline hover:text-red disabled:opacity-50">Purge now</button>
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
 

@@ -112,12 +112,17 @@ export async function GET(req: Request) {
       .from("hubspot_oauth_states").select("state").eq("state", state).maybeSingle();
     if (!anyStateRow) return errorResult("Invalid or expired OAuth state (possible CSRF)");
 
+    // A duplicate callback after a successful flow: attribute to a connection
+    // touched in the last 2 min. Check BOTH connected_at (fresh install) and
+    // last_refresh_at (reconnect reuses the row and only bumps last_refresh_at,
+    // not connected_at) — otherwise a reconnect showed a spurious error.
+    const cutoff = new Date(Date.now() - 120_000).toISOString();
     const { data: recentConn } = await sb
       .from("hubspot_connections")
       .select("hubspot_portal_id")
-      .gte("connected_at", new Date(Date.now() - 60_000).toISOString())
       .eq("is_active", true)
-      .order("connected_at", { ascending: false })
+      .or(`connected_at.gte.${cutoff},last_refresh_at.gte.${cutoff}`)
+      .order("last_refresh_at", { ascending: false })
       .limit(1).maybeSingle();
     if (recentConn) {
       const t = new URL(APP_URL);
