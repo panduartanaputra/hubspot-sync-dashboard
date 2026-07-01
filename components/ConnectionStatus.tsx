@@ -16,6 +16,9 @@ export default function ConnectionStatus() {
   const [showPipeline, setShowPipeline] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [pendingMirror, setPendingMirror] = useState(0);
+  // Inline confirmation instead of window.confirm(), which some browsers
+  // (e.g. Comet) silently block — making Disconnect/Purge appear to do nothing.
+  const [confirmKind, setConfirmKind] = useState<null | "disconnect" | "purge">(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   function showFlash(msg: string, tone: "info" | "error" = "info", ms = 5000) {
@@ -35,8 +38,8 @@ export default function ConnectionStatus() {
     }
   }
 
-  async function handlePurgeNow() {
-    if (!confirm("Permanently delete all mirrored CRM data now? This cannot be undone.")) return;
+  async function doPurge() {
+    setConfirmKind(null);
     setBusy(true);
     try {
       const n = await purgeMirrorNow();
@@ -139,15 +142,15 @@ export default function ConnectionStatus() {
     }, 800);
   }
 
-  async function handleDisconnect() {
-    if (!confirm("Disconnect HubSpot? Existing data in HubSpot will be left alone.")) return;
+  async function doDisconnect() {
+    setConfirmKind(null);
     setBusy(true);
     try {
       await disconnectHubSpot();
       await refresh();
       showFlash("Disconnected from HubSpot", "info", 4000);
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
+      showFlash(e instanceof Error ? e.message : String(e), "error", 6000);
     } finally {
       setBusy(false);
     }
@@ -194,13 +197,32 @@ export default function ConnectionStatus() {
             >
               {showPipeline ? "Hide pipeline" : "Pipeline ▸"}
             </button>
-            <button
-              onClick={handleDisconnect}
-              disabled={busy}
-              className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2 hover:text-red disabled:opacity-50"
-            >
-              Disconnect
-            </button>
+            {confirmKind === "disconnect" ? (
+              <span className="flex items-center gap-1">
+                <span className="text-[10px] text-textdim tracking-wider">Disconnect?</span>
+                <button
+                  onClick={doDisconnect}
+                  disabled={busy}
+                  className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-red/60 text-red hover:bg-red/10 disabled:opacity-50"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setConfirmKind(null)}
+                  className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2"
+                >
+                  No
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmKind("disconnect")}
+                disabled={busy}
+                className="text-[10px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 border border-border2 text-textdim hover:bg-panel2 hover:text-red disabled:opacity-50"
+              >
+                Disconnect
+              </button>
+            )}
           </div>
           {showPipeline && (
             <div className="w-[420px] mt-2 p-3 border border-border2 bg-panel/50">
@@ -220,13 +242,22 @@ export default function ConnectionStatus() {
           {pendingMirror > 0 && (
             <div className="mt-2 text-[10px] text-textdim tracking-wider max-w-xs text-right">
               {pendingMirror} mirrored record{pendingMirror === 1 ? "" : "s"} kept for 30 days after disconnect.{" "}
-              <button
-                onClick={handlePurgeNow}
-                disabled={busy}
-                className="underline hover:text-red disabled:opacity-50"
-              >
-                Purge now
-              </button>
+              {confirmKind === "purge" ? (
+                <span>
+                  Delete permanently?{" "}
+                  <button onClick={doPurge} disabled={busy} className="underline text-red hover:text-red disabled:opacity-50">Yes</button>
+                  {" · "}
+                  <button onClick={() => setConfirmKind(null)} className="underline hover:text-texthi">No</button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmKind("purge")}
+                  disabled={busy}
+                  className="underline hover:text-red disabled:opacity-50"
+                >
+                  Purge now
+                </button>
+              )}
             </div>
           )}
         </>
