@@ -5,6 +5,7 @@ import { fetchActiveConnection, disconnectHubSpot, fetchPendingMirrorCount, purg
 import { supabase } from "@/lib/supabase";
 import PipelineMapper from "@/components/PipelineMapper";
 import ConnectSyncModal from "@/components/ConnectSyncModal";
+import IntegrationsModal from "@/components/IntegrationsModal";
 import { droppedOptionalScopes, type SyncConfig } from "@/lib/hubspotScopes";
 
 export default function ConnectionStatus() {
@@ -15,6 +16,7 @@ export default function ConnectionStatus() {
   const [flashTone, setFlashTone] = useState<"info" | "error">("info");
   const [showPipeline, setShowPipeline] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showIntegrations, setShowIntegrations] = useState(false);
   const [pendingMirror, setPendingMirror] = useState(0);
   // Inline confirmation instead of window.confirm(), which some browsers
   // (e.g. Comet) silently block — making Disconnect/Purge appear to do nothing.
@@ -162,6 +164,12 @@ export default function ConnectionStatus() {
 
   return (
     <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={() => setShowIntegrations(true)}
+        className="text-[10px] font-bold tracking-[0.15em] uppercase text-textdim hover:text-texthi"
+      >
+        ⚙ Integrations
+      </button>
       {conn ? (
         <>
           <div className="flex items-center gap-2">
@@ -264,6 +272,14 @@ export default function ConnectionStatus() {
       )}
       {showConnectModal && (
         <ConnectSyncModal onContinue={handleConnect} onCancel={() => setShowConnectModal(false)} />
+      )}
+      {showIntegrations && (
+        <IntegrationsModal
+          conn={conn}
+          onConnectHubSpot={() => { setShowIntegrations(false); setShowConnectModal(true); }}
+          onDisconnectHubSpot={() => { setShowIntegrations(false); setConfirmKind("disconnect"); }}
+          onClose={() => setShowIntegrations(false)}
+        />
       )}
       {flash && (
         <div
