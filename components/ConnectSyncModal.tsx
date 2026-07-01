@@ -8,31 +8,37 @@
 // are what the product does. Everything else is opt-in. Pull is entirely
 // additive: pulled data mirrors into Metis, never overwriting native records.
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { defaultSyncConfig, type SyncConfig } from "@/lib/hubspotScopes";
 
 interface Row {
   key: string;
   label: string;
-  hint: string;
+  hint: ReactNode;
   locked?: boolean;
 }
 
+// Highlights the exact HubSpot object/page the data lands in, so the user knows
+// e.g. ticking "Companies" writes to their HubSpot Companies.
+function Dest({ children }: { children: ReactNode }) {
+  return <strong className="font-semibold text-texthi">{children}</strong>;
+}
+
 const PUSH_ROWS: Row[] = [
-  { key: "contacts", label: "Contacts", hint: "Leads Metis works become HubSpot contacts", locked: true },
-  { key: "deals", label: "Deals", hint: "Opportunities become HubSpot deals + stages", locked: true },
-  { key: "meetings", label: "Meetings", hint: "Booked meetings logged on the timeline", locked: true },
-  { key: "companies", label: "Companies", hint: "Push enriched company records" },
-  { key: "notes", label: "Notes", hint: "Agent findings & context as notes" },
-  { key: "tasks", label: "Tasks", hint: "Follow-ups Metis generates as tasks" },
+  { key: "contacts", label: "Contacts", hint: <>Leads Metis works appear in your HubSpot <Dest>Contacts</Dest></>, locked: true },
+  { key: "deals", label: "Deals", hint: <>Opportunities appear as <Dest>Deals</Dest>, with pipeline stages</>, locked: true },
+  { key: "meetings", label: "Meetings", hint: <>Booked meetings logged as <Dest>Meetings</Dest> on the timeline</>, locked: true },
+  { key: "companies", label: "Companies", hint: <>Enriched records pushed to your HubSpot <Dest>Companies</Dest></> },
+  { key: "notes", label: "Notes", hint: <>Agent findings written as <Dest>Notes</Dest> on the contact &amp; deal</> },
+  { key: "tasks", label: "Tasks", hint: <>Follow-ups created as <Dest>Tasks</Dest> for your reps</> },
 ];
 
 const PULL_ROWS: Row[] = [
-  { key: "contacts", label: "Contacts", hint: "Mirror contact fields your reps maintain" },
-  { key: "companies", label: "Companies", hint: "Mirror firmographics from your CRM" },
-  { key: "deals", label: "Deals", hint: "See stage changes reps make in HubSpot" },
-  { key: "owners", label: "Owners", hint: "Know which rep owns which record" },
-  { key: "line_items", label: "Line items", hint: "Mirror products/line items on deals" },
+  { key: "contacts", label: "Contacts", hint: <>Mirror your HubSpot <Dest>Contacts</Dest> (fields reps maintain)</> },
+  { key: "companies", label: "Companies", hint: <>Mirror your HubSpot <Dest>Companies</Dest> (firmographics)</> },
+  { key: "deals", label: "Deals", hint: <>Mirror your HubSpot <Dest>Deals</Dest> — stage changes reps make</> },
+  { key: "owners", label: "Owners", hint: <>Mirror <Dest>Owners</Dest> — who owns which record</> },
+  { key: "line_items", label: "Line items", hint: <>Mirror <Dest>Line items</Dest> on your deals</> },
 ];
 
 export default function ConnectSyncModal({
