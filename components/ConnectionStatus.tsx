@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchActiveConnection, disconnectHubSpot, HubSpotConnection } from "@/lib/queries";
+import { fetchActiveConnection, disconnectHubSpot, fetchPendingMirrorCount, purgeMirrorNow, HubSpotConnection } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import PipelineMapper from "@/components/PipelineMapper";
+import ConnectSyncModal from "@/components/ConnectSyncModal";
+import { droppedOptionalScopes, type SyncConfig } from "@/lib/hubspotScopes";
 
 export default function ConnectionStatus() {
   const [conn, setConn] = useState<HubSpotConnection | null>(null);
@@ -12,6 +14,8 @@ export default function ConnectionStatus() {
   const [flash, setFlash] = useState<string | null>(null);
   const [flashTone, setFlashTone] = useState<"info" | "error">("info");
   const [showPipeline, setShowPipeline] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [pendingMirror, setPendingMirror] = useState(0);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   function showFlash(msg: string, tone: "info" | "error" = "info", ms = 5000) {
@@ -23,10 +27,25 @@ export default function ConnectionStatus() {
   async function refresh() {
     try {
       setConn(await fetchActiveConnection());
+      try { setPendingMirror(await fetchPendingMirrorCount()); } catch { /* non-fatal */ }
     } catch (e) {
       console.error("connection fetch failed:", e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePurgeNow() {
+    if (!confirm("Permanently delete all mirrored CRM data now? This cannot be undone.")) return;
+    setBusy(true);
+    try {
+      const n = await purgeMirrorNow();
+      await refresh();
+      showFlash(`Purged ${n} mirrored record${n === 1 ? "" : "s"}`, "info", 4000);
+    } catch (e) {
+      showFlash(e instanceof Error ? e.message : String(e), "error", 6000);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -84,7 +103,11 @@ export default function ConnectionStatus() {
     };
   }, []);
 
-  function handleConnect() {
+  // Called from the consent modal's "Continue" click (still a user gesture, so
+  // the popup isn't blocked). The chosen SyncConfig rides along as ?config=.
+  function handleConnect(cfg: SyncConfig) {
+    setShowConnectModal(false);
+
     const w = 600;
     const h = 720;
     const left = window.screenX + (window.outerWidth - w) / 2;
@@ -94,7 +117,8 @@ export default function ConnectionStatus() {
     // Unique window name on every click so the browser NEVER reuses a stale popup
     // from a previous attempt (which would re-fire its old postMessage on focus).
     const windowName = `hubspot-oauth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const popup = window.open("/api/hubspot/connect", windowName, features);
+    const connectUrl = `/api/hubspot/connect?config=${encodeURIComponent(JSON.stringify(cfg))}`;
+    const popup = window.open(connectUrl, windowName, features);
 
     if (!popup || popup.closed || typeof popup.closed === "undefined") {
       showFlash(
@@ -148,6 +172,21 @@ export default function ConnectionStatus() {
           {conn.hubspot_user_email && (
             <div className="text-[10px] text-textdim tracking-wider">{conn.hubspot_user_email}</div>
           )}
+          {conn.reauth_required && (
+            <div className="mt-1 px-2 py-1 border border-red/50 text-red text-[10px] tracking-wider max-w-xs text-right">
+              ⚠ Reconnect needed — HubSpot access expired.{" "}
+              <button onClick={() => setShowConnectModal(true)} className="underline hover:text-texthi">Reconnect</button>
+            </div>
+          )}
+          {(() => {
+            const dropped = conn.sync_config && conn.granted_scopes
+              ? droppedOptionalScopes(conn.sync_config, conn.granted_scopes) : [];
+            return dropped.length > 0 ? (
+              <div className="mt-1 text-[10px] text-gold/80 tracking-wider max-w-xs text-right">
+                Some optional permissions weren’t granted ({dropped.length}). Those sync options are inactive.
+              </div>
+            ) : null;
+          })()}
           <div className="flex items-center gap-1 mt-0.5">
             <button
               onClick={() => setShowPipeline((s) => !s)}
@@ -173,12 +212,27 @@ export default function ConnectionStatus() {
         <>
           <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-textdim">HubSpot CRM</div>
           <button
-            onClick={handleConnect}
+            onClick={() => setShowConnectModal(true)}
             className="text-[11px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border border-gold text-gold hover:bg-gold/10 mt-1"
           >
             Connect HubSpot →
           </button>
+          {pendingMirror > 0 && (
+            <div className="mt-2 text-[10px] text-textdim tracking-wider max-w-xs text-right">
+              {pendingMirror} mirrored record{pendingMirror === 1 ? "" : "s"} kept for 30 days after disconnect.{" "}
+              <button
+                onClick={handlePurgeNow}
+                disabled={busy}
+                className="underline hover:text-red disabled:opacity-50"
+              >
+                Purge now
+              </button>
+            </div>
+          )}
         </>
+      )}
+      {showConnectModal && (
+        <ConnectSyncModal onContinue={handleConnect} onCancel={() => setShowConnectModal(false)} />
       )}
       {flash && (
         <div

@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { buildStageMapFromLabels, pickDefaultPipeline, type PipelinesPayload } from "@/lib/hubspotPipelines";
+import { normalizeSyncConfig, type SyncConfig } from "@/lib/hubspotScopes";
 
 const CLIENT_ID = process.env.HUBSPOT_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.HUBSPOT_OAUTH_CLIENT_SECRET;
@@ -131,6 +132,9 @@ export async function GET(req: Request) {
     return errorResult("OAuth state already used and no recent connection to attribute it to");
   }
 
+  // The user's push/pull consent choices, stashed on the state row by /connect.
+  const syncConfig: SyncConfig = normalizeSyncConfig(claimed[0]?.sync_config);
+
   // Exchange code for tokens
   const tokenRes = await fetch("https://api.hubapi.com/oauth/v1/token", {
     method: "POST",
@@ -245,9 +249,24 @@ export async function GET(req: Request) {
       is_active: true,
       disconnected_at: null,
       last_refresh_at: new Date().toISOString(),
+      // Phase 3: persist consent choices + what HubSpot actually granted.
+      // reauth flags cleared on a fresh successful authorize.
+      sync_config: syncConfig,
+      granted_scopes: scopes,
+      reauth_required: false,
+      reauth_reason: null,
+      reauth_at: null,
       ...pipelineFields,
     }).eq("id", existing.id);
     if (updateErr) return errorResult(`Failed to refresh connection: ${updateErr.message}`);
+
+    // Reconnect within the grace window: restore mirror rows we soft-deleted on
+    // the prior disconnect (un-hide them). The subsequent pull refreshes them and
+    // any that no longer exist in HubSpot simply won't be revived.
+    await sb.from("hubspot_mirror")
+      .update({ deleted_at: null })
+      .eq("connection_id", existing.id)
+      .not("deleted_at", "is", null);
   } else {
     const { error: insertErr } = await sb.from("hubspot_connections").insert({
       client_id: anyClient?.id ?? null,
@@ -261,6 +280,9 @@ export async function GET(req: Request) {
       scopes,
       hub_domain: account.uiDomain,
       is_active: true,
+      // Phase 3: persist consent choices + what HubSpot actually granted.
+      sync_config: syncConfig,
+      granted_scopes: scopes,
       // First-time connect only: seed pipeline_id + stage_map from the heuristic.
       // On reconnect we don't overwrite — preserves any user customization.
       pipeline_id: initialPipelineId,
@@ -362,6 +384,17 @@ export async function GET(req: Request) {
     body: "{}",
   }).catch((e) => {
     console.error("Failed to trigger backfill-hubspot:", e);
+  });
+
+  // Phase 3: also kick off the inbound pull so the mirror populates with whatever
+  // the user opted to pull (sync_config.pull). No-ops server-side if nothing is
+  // selected. Fire-and-forget, same as the outbound backfill.
+  fetch(`${supabaseUrl}/functions/v1/pull-from-hubspot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${serviceRoleKey}` },
+    body: "{}",
+  }).catch((e) => {
+    console.error("Failed to trigger pull-from-hubspot:", e);
   });
 
   // Success — for popups, close + postMessage; for direct nav, redirect back

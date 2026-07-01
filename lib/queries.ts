@@ -104,18 +104,39 @@ export interface HubSpotConnection {
   stage_map: Record<string, string> | null;
   pipelines_cache: PipelinesPayload | null;
   pipelines_cached_at: string | null;
+  reauth_required: boolean;
+  granted_scopes: string[] | null;
+  sync_config: import("./hubspotScopes").SyncConfig | null;
 }
 
 export async function fetchActiveConnection(): Promise<HubSpotConnection | null> {
   const { data, error } = await supabase
     .from("hubspot_connections")
-    .select("id,hubspot_portal_id,hubspot_user_email,hub_domain,scopes,connected_at,is_active,pipeline_id,stage_map,pipelines_cache,pipelines_cached_at")
+    .select("id,hubspot_portal_id,hubspot_user_email,hub_domain,scopes,connected_at,is_active,pipeline_id,stage_map,pipelines_cache,pipelines_cached_at,reauth_required,granted_scopes,sync_config")
     .eq("is_active", true)
     .order("connected_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data as HubSpotConnection | null;
+}
+
+/** Count soft-deleted (in grace window) mirror rows — for the "Purge now" affordance. */
+export async function fetchPendingMirrorCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("hubspot_mirror")
+    .select("id", { count: "exact", head: true })
+    .not("deleted_at", "is", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Immediately hard-delete soft-deleted mirror data (GDPR erasure). */
+export async function purgeMirrorNow(): Promise<number> {
+  const res = await fetch("/api/hubspot/purge", { method: "POST" });
+  if (!res.ok) throw new Error(`Purge failed: ${await res.text()}`);
+  const body = await res.json();
+  return body.purged ?? 0;
 }
 
 export async function savePipelineMapping(args: {
