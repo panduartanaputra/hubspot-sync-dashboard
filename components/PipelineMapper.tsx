@@ -6,7 +6,7 @@
 // every render. Saves via PATCH /api/hubspot/pipeline.
 
 import { useMemo, useState } from "react";
-import { savePipelineMapping, type HubSpotConnection } from "@/lib/queries";
+import { savePipelineMapping, refreshPipelines, type HubSpotConnection } from "@/lib/queries";
 import { SALESOS_STATUSES, type Pipeline, type SalesOsStatus } from "@/lib/hubspotPipelines";
 
 const STATUS_LABEL: Record<SalesOsStatus, string> = {
@@ -36,6 +36,20 @@ export default function PipelineMapper({ conn, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await refreshPipelines();
+      onSaved?.(); // reloads the connection → fresh pipelines_cache flows back in as props
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const currentPipeline = useMemo(
     () => pipelines.find((p) => p.id === pipelineId) ?? null,
@@ -73,8 +87,17 @@ export default function PipelineMapper({ conn, onSaved }: Props) {
 
   if (pipelines.length === 0) {
     return (
-      <div className="text-xs text-neutral-500">
-        No pipelines cached yet — reconnect HubSpot to refresh.
+      <div className="text-xs text-neutral-500 flex items-center gap-2">
+        No pipelines cached yet.
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="underline text-neutral-300 hover:text-white disabled:opacity-50"
+        >
+          {refreshing ? "Refreshing…" : "↻ Refresh from HubSpot"}
+        </button>
+        {error && <span className="text-red-400">{error}</span>}
       </div>
     );
   }
@@ -98,6 +121,15 @@ export default function PipelineMapper({ conn, onSaved }: Props) {
             <option key={p.id} value={p.id}>{p.label}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Re-pull pipelines from HubSpot (picks up newly-created ones)"
+          className="text-neutral-400 hover:text-white disabled:opacity-50"
+        >
+          {refreshing ? "↻…" : "↻ Refresh"}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-1.5">

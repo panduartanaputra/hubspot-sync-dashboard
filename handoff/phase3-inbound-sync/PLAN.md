@@ -41,6 +41,7 @@ Extend the existing one-way HubSpot integration (app → client CRM) to also **p
 7. **Per-field direction control** — NOT in v1 (Pattern B). Object-level opt-in only, sensible built-in defaults. Advanced per-field mapper deferred to v2; nothing in v1 blocks adding it later.
 8. **Token refresh** — proactive refresh ~5 min before expiry; on `invalid_grant`/refresh failure, flag connection `reauth_required`, do NOT retry, show reconnect banner + email owner once.
 9. **Tenancy naming (Option A)** — new tables use `client_id` (cockpit-consistent, joins cleanly with existing tables). **PORT STEP: rename `client_id` → `client_org_id` when moving to METIS.** See "Port checklist".
+10. **Multi-pipeline routing — DEFERRED to v2 (user confirmed "eventually").** Today the connection holds ONE `pipeline_id` + ONE `stage_map`; all pushed deals go to that single pipeline. v2 needs: per-pipeline stage maps (keyed by pipeline_id) PLUS a routing rule deciding which opportunity lands in which pipeline (e.g. new-business vs renewals). Per-pipeline maps are meaningless without the routing rule (a deal lives in only one pipeline). The pipeline list is now refreshable on demand (↻ Refresh in PipelineMapper) without reconnect.
 
 ## Parked (awaiting user's team decision)
 

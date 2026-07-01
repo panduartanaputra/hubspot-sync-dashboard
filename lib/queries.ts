@@ -158,6 +158,12 @@ export async function purgeMirrorNow(connectionId?: string): Promise<number> {
   return body.purged ?? 0;
 }
 
+/** Re-pull the portal's deal pipelines from HubSpot (picks up pipelines created after connect). */
+export async function refreshPipelines(): Promise<void> {
+  const res = await fetch("/api/hubspot/pipeline/refresh", { method: "POST" });
+  if (!res.ok) throw new Error(`Refresh pipelines failed: ${await res.text()}`);
+}
+
 export async function savePipelineMapping(args: {
   pipeline_id: string | null;
   stage_map: Record<string, string> | null;
