@@ -62,9 +62,22 @@ Extend the existing one-way HubSpot integration (app → client CRM) to also **p
     - **Push Tasks** — no task creation exists. Inputs needed: what generates a task (does the app produce follow-up items at all?), task content, due date, assignee (owner).
     - **UX decision (user, 2026-07-01):** KEEP all three visible in the consent UI (not hidden), build them out in v2. Interim honesty option (not taken): a "coming soon" tag on unbuilt options.
 
+## Writeback rule — DECIDED (2026-07-02), build is v2
+
+**Decision:** agent enrichment for **both Contacts and Companies/Accounts** is written into the client's CRM as **Metis-branded custom timeline events** — NOT custom fields, NOT plain notes.
+- **Why not custom fields:** creating custom properties needs `crm.schemas.*.write` (admin-level schema change) — clients typically refuse. Custom timeline events need NO client admin: the event template is defined ONCE on our app; it flows to every connected portal automatically, appears under Activities → Custom events, branded "Metis" + logo.
+- **Trade-off accepted:** timeline events are per-record activity (not filterable list columns / not reportable). The rich, queryable enrichment lives in Metis (the hub); HubSpot gets the per-record human-readable surface. Custom fields remain a "nice to have only if a given client's admin allows it," not the baseline.
+- **Persistence on disconnect (confirmed):** what Metis wrote INTO the client's CRM (timeline events, created records) STAYS — the client keeps it. We only purge OUR mirror of data we PULLED from them, after the 30-day grace. Golden rule: their CRM data is theirs; our mirror is ours.
+- **Build status:** v2. Ties directly to "Build Push Companies/Notes/Tasks" (item 12) — Notes/enrichment ⇒ timeline events; and to renaming the app "Metis" (below) so events attribute correctly.
+
+## App branding — DONE / in progress (2026-07-02)
+
+- App `name` renamed `SalesOS Sync` → **"Metis"** + description updated in `hubspot-app/salesos-sync/src/app/app-hsmeta.json`. **Deploy pending:** `hs project upload` from that dir. This is what the consent screen + all activity attribution ("…from Metis") show.
+- **Logo:** square high-res Metis "MM" mark to be uploaded in the HubSpot **developer portal → app settings** (manual UI step; logos are not set in the project code). User provided the asset 2026-07-02.
+
 ## Parked (awaiting user's team decision)
 
-- **Writeback rule** — Option A: if `crm.schemas.*.write` granted, provision a set of `metis_*`/source-labeled custom properties on connect and write agent-generated data only into those; Option B (fallback if schema scope declined): write everything as timestamped Notes tagged with the source. Either way, native fields are never touched. **Not being implemented until the team lands this.** Current outbound push logic (v13) stays untouched.
+_(Writeback rule resolved — see above. Nothing else currently parked awaiting the team.)_
 
 ---
 
