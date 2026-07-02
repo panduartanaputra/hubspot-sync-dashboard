@@ -62,6 +62,8 @@ Extend the existing one-way HubSpot integration (app → client CRM) to also **p
     - **Push Tasks** — no task creation exists. Inputs needed: what generates a task (does the app produce follow-up items at all?), task content, due date, assignee (owner).
     - **UX decision (user, 2026-07-01):** KEEP all three visible in the consent UI (not hidden), build them out in v2. Interim honesty option (not taken): a "coming soon" tag on unbuilt options.
 
+13. **Push opportunity OWNER → HubSpot deal owner — DEFERRED to v2 (user request 2026-07-02).** METIS opportunities carry an **owner** (a METIS user, e.g. shown on the Opportunities page). When an opp reaches a synced status and we create/update its HubSpot deal, also set the deal's `hubspot_owner_id` to that owner — **but only if the deal has no owner yet** (never overwrite a rep's manual assignment; golden rule). **Dependency:** HubSpot owners are the CLIENT's HubSpot users, not METIS users — so we must MAP METIS owner → HubSpot owner by **email**, which requires the **Owners pull** (to know the client's HubSpot user list). **Open sub-question:** when the METIS owner has NO matching user in the client's HubSpot (likely for agency/PORTFOLIO PLAY staff), fall back to **Unassigned** or to a **designated client rep**? — product call, same owner-key as multi-pipeline routing (item 10). Consider applying to the associated contact's owner too.
+
 ## Writeback rule — DECIDED (2026-07-02), build is v2
 
 **Decision:** agent enrichment for **both Contacts and Companies/Accounts** is written into the client's CRM as **Metis-branded custom timeline events** — NOT custom fields, NOT plain notes.
