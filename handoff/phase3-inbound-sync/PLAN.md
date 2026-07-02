@@ -32,7 +32,12 @@ Extend the existing one-way HubSpot integration (app → client CRM) to also **p
 
 ## Decisions locked
 
-0. **Connection model — CONFIRMED (2026-07-02):** ONE connection per client, at the HubSpot **account/portal level** — a single user authorizes for the whole company, and that connection covers all opportunities of all METIS users in that tenant (portal-wide OAuth access, not filtered by the authorizer's UI permissions). **Multiple separate HubSpot portals per client is OUT OF SCOPE** unless a real client requires it (would need multi-connection support). This matches the current build (single active connection).
+0. **Connection model — CONFIRMED (2026-07-02):** v1 BEHAVIOR is ONE connection per client at the HubSpot **account/portal level** — a single user authorizes for the whole company, covering all opportunities of all METIS users in that tenant (portal-wide OAuth, not filtered by the authorizer's UI permissions).
+
+   **BUT: build it MULTI-CONNECTION-READY (user directive 2026-07-02).** v1 behaves single-connection, yet the architecture must let us transition to "many HubSpot accounts connected to METIS" as an ADDITIVE change, not a rewrite.
+   - **Already ready:** `hubspot_connections` is a multi-row table; `hubspot_mirror` / `hubspot_sync_jobs` / `hubspot_sync_state` / `hubspot_webhook_events` all key off `connection_id` (physically isolated per connection); the callback upserts by `portal_id`, so a second account cleanly becomes a second row.
+   - **Single-connection shims to swap later (NOT a rebuild):** `resolveActiveConnection()` uses `is_active … limit 1` (already has an optional `clientId` param for scoping); edge functions run against "the" connection; webhook should resolve by `event.portalId`; UI shows one connection (later: list).
+   - **GUARDRAIL for all new code:** thread `connection_id` / `client_id` through operations — never hardcode a global single-connection assumption. Resolve the *right* connection per op (by portal_id / client_id), not "the one active." The flip to multi = change resolution logic + list connections in UI; data model untouched.
 
 1. **Consent UX** — pre-OAuth screen in our dashboard with two checkbox groups ("push into your HubSpot" / "pull from your HubSpot"); we assemble `scope=` (required/locked) + `optional_scope=` (user-selected) dynamically, then redirect to HubSpot. After callback, inspect the token's actually-granted scopes and surface any silently-dropped ones.
 2. **Push scopes** — locked: Contacts, Deals, Meetings. Optional: Companies, Notes, Tasks (all the optional push scopes offered).
