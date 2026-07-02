@@ -71,6 +71,11 @@ Extend the existing one-way HubSpot integration (app → client CRM) to also **p
 
 13. **Push opportunity OWNER → HubSpot deal owner — DEFERRED to v2 (user request 2026-07-02).** METIS opportunities carry an **owner** (a METIS user, e.g. shown on the Opportunities page). When an opp reaches a synced status and we create/update its HubSpot deal, also set the deal's `hubspot_owner_id` to that owner — **but only if the deal has no owner yet** (never overwrite a rep's manual assignment; golden rule). **Dependency:** HubSpot owners are the CLIENT's HubSpot users, not METIS users — so we must MAP METIS owner → HubSpot owner by **email**, which requires the **Owners pull** (to know the client's HubSpot user list). **Fallback — DECIDED (2026-07-02):** when the METIS owner has NO matching user in the client's HubSpot (e.g. agency/PORTFOLIO PLAY staff, no seat, or email mismatch) → leave the deal **Unassigned** (no fallback rep). Consider applying to the associated contact's owner too.
 
+    **Owner vs Team — a METIS opp has ONE Owner + a TEAM (multiple members) (info 2026-07-02):**
+    - **Owner → HubSpot deal owner** (`hubspot_owner_id`), 1:1, email match + Unassigned fallback (above).
+    - **Team members → NO native HubSpot equivalent** (a HubSpot deal has only one owner; no per-deal multi-user field; a structured field would need custom properties = client admin = avoided). **DECIDED (2026-07-02): surface team members as text inside the Metis timeline event** (e.g. "Team: X, Y, Z") — the no-admin writeback path. Team is NOT pushed as owners/fields.
+    - **Routing (v2) keys on the single Owner only** — deterministic. Team is informational, never a routing key (can't pick among multiple members' portals).
+
 ## Writeback rule — DECIDED (2026-07-02), build is v2
 
 **Decision:** agent enrichment for **both Contacts and Companies/Accounts** is written into the client's CRM as **Metis-branded custom timeline events** — NOT custom fields, NOT plain notes.
