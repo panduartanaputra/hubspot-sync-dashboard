@@ -30,7 +30,7 @@ const PUSH_ROWS: Row[] = [
   { key: "deals", label: "Deals", hint: <>Opportunities appear as <Dest>Deals</Dest>, with pipeline stages</>, locked: true },
   { key: "meetings", label: "Meetings", hint: <>Booked meetings logged as <Dest>Meetings</Dest> on the timeline</>, locked: true },
   { key: "companies", label: "Companies", hint: <>Find-or-create your HubSpot <Dest>Companies</Dest> from enriched org records</> },
-  { key: "notes", label: "Enrichment", hint: <>Agent findings added as Metis-branded <Dest>timeline events</Dest> on the contact</> },
+  { key: "notes", label: "Enrichment", hint: <>Agent findings added as a Metis-labeled <Dest>Note</Dest> on the contact &amp; deal</> },
   { key: "tasks", label: "Tasks", hint: <>Follow-ups created as <Dest>Tasks</Dest> for your reps</>, comingSoon: true },
 ];
 

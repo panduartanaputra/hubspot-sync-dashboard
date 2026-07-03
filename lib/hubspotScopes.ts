@@ -26,13 +26,15 @@ export const LOCKED_SCOPES: string[] = [
 
 // ── Optional scopes, keyed by selectable capability ──────────────────────────
 // MUST also be registered as optional scopes on HubSpot app 42333854.
-// push.notes = agent enrichment written as Metis-branded custom TIMELINE EVENTS,
-// which needs the `timeline` scope. Capabilities not listed here (push meetings,
-// pull contacts/deals) need NO extra scope — they're covered by locked scopes and
-// are governed purely by the sync_config flags. (Tasks push is not built yet.)
+// push.notes (agent enrichment as a Metis-labeled Note) needs NO extra scope:
+// notes are engagements, covered by crm.objects.contacts.write (locked), exactly
+// like meetings. (Custom timeline events were evaluated but require a developer
+// API key the trial account can't issue — verified 401 — so enrichment surfaces
+// as a Note instead.) Capabilities not listed here (push meetings/notes, pull
+// contacts/deals) need no extra scope and are governed purely by the sync_config
+// flags. (Tasks push is not built yet.)
 export const OPTIONAL_SCOPES: Record<string, string[]> = {
   "push.companies": ["crm.objects.companies.write", "crm.schemas.companies.write"],
-  "push.notes": ["timeline"],
   "pull.companies": ["crm.objects.companies.read"],
   "pull.owners": ["crm.objects.owners.read"],
   "pull.line_items": ["crm.objects.line_items.read"],
@@ -99,7 +101,6 @@ export function normalizeSyncConfig(input: unknown): SyncConfig {
 function selectedOptionalCapabilities(cfg: SyncConfig): string[] {
   const caps: string[] = [];
   if (cfg.push.companies) caps.push("push.companies");
-  if (cfg.push.notes) caps.push("push.notes");
   if (cfg.pull.companies) caps.push("pull.companies");
   if (cfg.pull.owners) caps.push("pull.owners");
   if (cfg.pull.line_items) caps.push("pull.line_items");
