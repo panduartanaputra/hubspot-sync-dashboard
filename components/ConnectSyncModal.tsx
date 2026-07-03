@@ -16,6 +16,7 @@ interface Row {
   label: string;
   hint: ReactNode;
   locked?: boolean;
+  comingSoon?: boolean; // shown but not yet built — not selectable, not sent
 }
 
 // Highlights the exact HubSpot object/page the data lands in, so the user knows
@@ -28,9 +29,9 @@ const PUSH_ROWS: Row[] = [
   { key: "contacts", label: "Contacts", hint: <>Leads Metis works appear in your HubSpot <Dest>Contacts</Dest></>, locked: true },
   { key: "deals", label: "Deals", hint: <>Opportunities appear as <Dest>Deals</Dest>, with pipeline stages</>, locked: true },
   { key: "meetings", label: "Meetings", hint: <>Booked meetings logged as <Dest>Meetings</Dest> on the timeline</>, locked: true },
-  { key: "companies", label: "Companies", hint: <>Enriched records pushed to your HubSpot <Dest>Companies</Dest></> },
-  { key: "notes", label: "Notes", hint: <>Agent findings written as <Dest>Notes</Dest> on the contact &amp; deal</> },
-  { key: "tasks", label: "Tasks", hint: <>Follow-ups created as <Dest>Tasks</Dest> for your reps</> },
+  { key: "companies", label: "Companies", hint: <>Find-or-create your HubSpot <Dest>Companies</Dest> from enriched org records</> },
+  { key: "notes", label: "Enrichment", hint: <>Agent findings added as Metis-branded <Dest>timeline events</Dest> on the contact</> },
+  { key: "tasks", label: "Tasks", hint: <>Follow-ups created as <Dest>Tasks</Dest> for your reps</>, comingSoon: true },
 ];
 
 const PULL_ROWS: Row[] = [
@@ -87,30 +88,39 @@ export default function ConnectSyncModal({
         <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-texthi">{title}</div>
         <div className="text-[10px] text-textdim tracking-wider mb-2">{subtitle}</div>
         <div className="flex flex-col gap-1">
-          {rows.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              disabled={r.locked}
-              onClick={() => !r.locked && onToggle(r.key)}
-              className={`flex items-start gap-2 text-left px-2 py-1.5 border ${
-                values[r.key] ? "border-border2 bg-panel2/40" : "border-border2/50"
-              } ${r.locked ? "cursor-default" : "hover:bg-panel2"}`}
-            >
-              <Checkbox checked={values[r.key]} locked={r.locked} />
-              <span className="flex flex-col">
-                <span className="text-[12px] text-texthi flex items-center gap-1.5">
-                  {r.label}
-                  {r.locked && (
-                    <span className="text-[8px] tracking-[0.15em] uppercase text-textdim2 border border-border2/60 px-1">
-                      always
-                    </span>
-                  )}
+          {rows.map((r) => {
+            const disabled = r.locked || r.comingSoon;
+            const checked = !r.comingSoon && values[r.key];
+            return (
+              <button
+                key={r.key}
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && onToggle(r.key)}
+                className={`flex items-start gap-2 text-left px-2 py-1.5 border ${
+                  checked ? "border-border2 bg-panel2/40" : "border-border2/50"
+                } ${disabled ? "cursor-default" : "hover:bg-panel2"} ${r.comingSoon ? "opacity-40" : ""}`}
+              >
+                <Checkbox checked={checked} locked={disabled} />
+                <span className="flex flex-col">
+                  <span className="text-[12px] text-texthi flex items-center gap-1.5">
+                    {r.label}
+                    {r.locked && (
+                      <span className="text-[8px] tracking-[0.15em] uppercase text-textdim2 border border-border2/60 px-1">
+                        always
+                      </span>
+                    )}
+                    {r.comingSoon && (
+                      <span className="text-[8px] tracking-[0.15em] uppercase text-textdim2 border border-border2/60 px-1">
+                        soon
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-textdim tracking-wide">{r.hint}</span>
                 </span>
-                <span className="text-[10px] text-textdim tracking-wide">{r.hint}</span>
-              </span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
